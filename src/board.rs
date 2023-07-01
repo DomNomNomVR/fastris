@@ -1,4 +1,7 @@
-use std::collections::{HashMap, VecDeque};
+use std::{
+    cmp::max,
+    collections::{HashMap, VecDeque},
+};
 
 // import the generated code
 #[allow(dead_code, unused_imports)]
@@ -17,6 +20,7 @@ use flatbuffers::FlatBufferBuilder;
 // mod client_generated;
 // pub use client_generated::fastris::client::{PlayerAction, PlayerActionArgs};
 
+#[derive(PartialEq, Eq, Debug)]
 enum Orientation {
     // defined by the way the middle part of the T-piece points.
     Up,    // 0, also spawn
@@ -25,6 +29,7 @@ enum Orientation {
     Left,  // L
 }
 
+#[derive(PartialEq, Eq, Debug)]
 struct Mino {
     mino_type: MinoType,
     orientation: Orientation,
@@ -44,18 +49,19 @@ struct Kick {
 }
 
 fn mask_from_mino(m: &Mino, b: &Board) -> Result<MinoMask, Penalty> {
-    let shift_to_pivot = b.width - m.pivot_x;
+    let shift_to_pivot = b.width - 1 - m.pivot_x;
     // https://tetris.wiki/Super_Rotation_System#How_Guideline_SRS_Really_Works
     // The following match statement is effectively encoding this table:
     // https://tetris.wiki/images/1/17/SRS-true-rotations.png
+    // note that covered[0] is the bottom most bitmask
     match m.mino_type {
         MinoType::I => match m.orientation {
             Orientation::Up => Ok(MinoMask {
-                covered: [0, 0, 0, 0b1111 << (shift_to_pivot - 3)],
+                covered: [0b1111 << (shift_to_pivot - 2), 0, 0, 0],
                 bottom_row: m.pivot_y,
             }),
             Orientation::Down => Ok(MinoMask {
-                covered: [0, 0, 0, 0b1111 << (shift_to_pivot - 2)],
+                covered: [0b1111 << (shift_to_pivot - 1), 0, 0, 0],
                 bottom_row: m.pivot_y,
             }),
             Orientation::Right => {
@@ -76,19 +82,19 @@ fn mask_from_mino(m: &Mino, b: &Board) -> Result<MinoMask, Penalty> {
         MinoType::T => match m.orientation {
             Orientation::Up => Ok(MinoMask {
                 covered: [
-                    0,
-                    0,
-                    0b010 << (shift_to_pivot - 1),
                     0b111 << (shift_to_pivot - 1),
+                    0b010 << (shift_to_pivot - 1),
+                    0,
+                    0,
                 ],
                 bottom_row: m.pivot_y,
             }),
             Orientation::Down => Ok(MinoMask {
                 covered: [
-                    0,
-                    0,
-                    0b111 << (shift_to_pivot - 1),
                     0b010 << (shift_to_pivot - 1),
+                    0b111 << (shift_to_pivot - 1),
+                    0,
+                    0,
                 ],
                 bottom_row: m.pivot_y - 1,
             }),
@@ -96,10 +102,10 @@ fn mask_from_mino(m: &Mino, b: &Board) -> Result<MinoMask, Penalty> {
                 let single_bit = 1u16 << (shift_to_pivot);
                 Ok(MinoMask {
                     covered: [
-                        0,
                         0b1 << shift_to_pivot,
                         0b11 << (shift_to_pivot - 1),
                         0b1 << shift_to_pivot,
+                        0,
                     ],
                     bottom_row: (m.pivot_y - 1),
                 })
@@ -108,10 +114,98 @@ fn mask_from_mino(m: &Mino, b: &Board) -> Result<MinoMask, Penalty> {
                 let single_bit = 1u16 << (shift_to_pivot);
                 Ok(MinoMask {
                     covered: [
-                        0,
                         0b01 << shift_to_pivot,
                         0b11 << shift_to_pivot,
                         0b01 << shift_to_pivot,
+                        0,
+                    ],
+                    bottom_row: (m.pivot_y - 1),
+                })
+            }
+        },
+        MinoType::L => match m.orientation {
+            Orientation::Up => Ok(MinoMask {
+                covered: [
+                    0b111 << (shift_to_pivot - 1),
+                    0b001 << (shift_to_pivot - 1),
+                    0,
+                    0,
+                ],
+                bottom_row: m.pivot_y,
+            }),
+            Orientation::Down => Ok(MinoMask {
+                covered: [
+                    0b100 << (shift_to_pivot - 1),
+                    0b111 << (shift_to_pivot - 1),
+                    0,
+                    0,
+                ],
+                bottom_row: m.pivot_y - 1,
+            }),
+            Orientation::Right => {
+                let single_bit = 1u16 << (shift_to_pivot);
+                Ok(MinoMask {
+                    covered: [
+                        0b11 << (shift_to_pivot - 1),
+                        0b10 << (shift_to_pivot - 1),
+                        0b10 << (shift_to_pivot - 1),
+                        0,
+                    ],
+                    bottom_row: (m.pivot_y - 1),
+                })
+            }
+            Orientation::Left => {
+                let single_bit = 1u16 << (shift_to_pivot);
+                Ok(MinoMask {
+                    covered: [
+                        0b01 << shift_to_pivot,
+                        0b01 << shift_to_pivot,
+                        0b11 << shift_to_pivot,
+                        0,
+                    ],
+                    bottom_row: (m.pivot_y - 1),
+                })
+            }
+        },
+        MinoType::J => match m.orientation {
+            Orientation::Up => Ok(MinoMask {
+                covered: [
+                    0b111 << (shift_to_pivot - 1),
+                    0b100 << (shift_to_pivot - 1),
+                    0,
+                    0,
+                ],
+                bottom_row: m.pivot_y,
+            }),
+            Orientation::Down => Ok(MinoMask {
+                covered: [
+                    0b001 << (shift_to_pivot - 1),
+                    0b111 << (shift_to_pivot - 1),
+                    0,
+                    0,
+                ],
+                bottom_row: m.pivot_y - 1,
+            }),
+            Orientation::Right => {
+                let single_bit = 1u16 << (shift_to_pivot);
+                Ok(MinoMask {
+                    covered: [
+                        0b10 << (shift_to_pivot - 1),
+                        0b10 << (shift_to_pivot - 1),
+                        0b11 << (shift_to_pivot - 1),
+                        0,
+                    ],
+                    bottom_row: (m.pivot_y - 1),
+                })
+            }
+            Orientation::Left => {
+                let single_bit = 1u16 << (shift_to_pivot);
+                Ok(MinoMask {
+                    covered: [
+                        0b11 << shift_to_pivot,
+                        0b01 << shift_to_pivot,
+                        0b01 << shift_to_pivot,
+                        0,
                     ],
                     bottom_row: (m.pivot_y - 1),
                 })
@@ -131,6 +225,7 @@ fn mask_from_mino(m: &Mino, b: &Board) -> Result<MinoMask, Penalty> {
 //     }
 // }
 
+#[derive(PartialEq, Eq, Debug)]
 struct Board {
     // we assume this is big enough
     // each row is represented as an int bitmask
@@ -162,7 +257,7 @@ impl Board {
         let mut board = Board {
             rows: [0; 1024],
             width: 0,
-            spawn_height: lines.len() - 4,
+            spawn_height: lines.len(),
             upcoming_minos: VecDeque::<MinoType>::new(),
             active_mino: None,
             hold: None,
@@ -172,25 +267,39 @@ impl Board {
             str_to_mino_type.insert(mino_type.variant_name().unwrap(), *mino_type);
         }
 
-        for line in lines {
+        for (line_i, line) in lines.iter().enumerate() {
+            let row_i = lines.len() - 1 - line_i;
             let segments = line.splitn(3, "|").collect::<Vec<&str>>();
             assert_eq!(segments.len(), 3);
 
-            // parse hold
+            // parse hold and spawn height
             let hold_maybe = segments[0].trim_matches(char::is_whitespace);
             if hold_maybe.len() == 1 {
-                assert_eq!(board.hold, None); // must have at most 1 hold
-                board.hold = Some(str_to_mino_type[hold_maybe]);
+                if hold_maybe == "_" {
+                    // spawn height marker
+                    assert_eq!(board.spawn_height, lines.len()); // must have at most one spawn_height marker
+                    board.spawn_height = row_i;
+                } else {
+                    assert_eq!(board.hold, None); // must have at most 1 hold
+                    board.hold = Some(str_to_mino_type[hold_maybe]);
+                }
             } else {
                 assert_eq!(hold_maybe, "");
             }
 
             // parse the row of blocks.
-            let row = segments[1];
+            let row = segments[1].chars().collect::<Vec<_>>();
             if board.width == 0 {
                 board.width = row.len();
             } else {
+                let mut row_int: u16 = 0;
                 assert_eq!(board.width, row.len());
+                for x in 0..board.width {
+                    if row[x] != ' ' {
+                        row_int |= 1 << board.width - 1 - x;
+                    }
+                }
+                board.rows[row_i] = row_int;
             }
 
             // parse upcoming queue
@@ -204,6 +313,67 @@ impl Board {
             }
         }
         board
+    }
+}
+
+impl std::fmt::Display for Board {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let max_y = max(
+            self.spawn_height,
+            match &self.active_mino {
+                None => 0,
+                Some(m) => m.pivot_y + 4,
+            },
+        );
+        let hold_piece_y = if self.spawn_height > 4 {
+            self.spawn_height - 2usize
+        } else {
+            self.spawn_height - 1usize
+        };
+        for y in (0..=max_y).rev() {
+            // SpawnHeight and hold
+            write!(
+                f,
+                "{}",
+                if y == self.spawn_height {
+                    "_"
+                } else if y == hold_piece_y {
+                    match self.hold {
+                        None => " ",
+                        Some(mino_type) => mino_type.variant_name().unwrap(),
+                    }
+                } else {
+                    " "
+                }
+            )?;
+
+            write!(f, "|")?;
+            // board rows
+            // TODO: Active Piece
+            for x in 0..self.width {
+                write!(
+                    f,
+                    "{}",
+                    match self.rows[y] & 1 << self.width - x - 1 {
+                        0 => " ",
+                        _ => ".",
+                    }
+                )?;
+            }
+            write!(f, "|")?;
+            // upcoming_pieces
+            write!(
+                f,
+                "{}",
+                match self.upcoming_minos.get(max_y - y) {
+                    None => " ",
+                    Some(mino_type) => mino_type.variant_name().unwrap(),
+                }
+            )?;
+            write!(f, "\n")?;
+        }
+        // write!(f, "({}, {})", self.x, self.y)
+        std::fmt::Result::Ok(())
     }
 }
 
@@ -263,15 +433,18 @@ fn apply_action(a: &PlayerAction, b: &mut Board) -> Result<u8, Penalty> {
             None => Err(Penalty::new("hold was empty")),
             Some(a2) => apply_hold(&a2, b),
         },
-        _ => Err(Penalty::new("Unsupported PlayerAction")),
+        x => Err(Penalty::new(
+            format!("Unsupported PlayerAction: {:?}", x).as_str(),
+        )),
     }
 }
 
 fn spawn_mino(mino_type: MinoType, board: &Board) -> Mino {
+    let pivot_x = (board.width - 1) / 2;
     return Mino {
         mino_type: mino_type,
         orientation: Orientation::Up,
-        pivot_x: board.width / 2,
+        pivot_x: pivot_x,
         pivot_y: board.spawn_height,
     };
 }
@@ -309,7 +482,7 @@ fn test_intersection(mask: &MinoMask, board: &Board) -> bool {
 }
 fn apply_hard_drop(a: &HardDrop, board: &mut Board) -> Result<u8, Penalty> {
     if board.active_mino.is_none() {
-        return Err(Penalty::new("Trying to soft drop without an active piece"));
+        return Err(Penalty::new("Trying to hard drop without an active piece"));
     }
     let mino = board.active_mino.as_ref().unwrap();
     let mut mask = mask_from_mino(mino, board)?;
@@ -327,6 +500,7 @@ fn apply_hard_drop(a: &HardDrop, board: &mut Board) -> Result<u8, Penalty> {
     for i in 0..4usize {
         board.rows[mask.bottom_row + i] |= mask.covered[i];
     }
+    board.active_mino = None;
 
     Ok(0)
 }
@@ -343,86 +517,88 @@ fn apply_horizontal(a: &Horizontal, board: &mut Board) -> Result<u8, Penalty> {
     Ok(0)
 }
 
-enum DomsActionArgs {
-    RotateCWArgs(RotateCWArgs),
-    RotateCCWArgs(RotateCCWArgs),
-    Rotate180Args(Rotate180Args),
-    HoldArgs(HoldArgs),
-    HardDropArgs(HardDropArgs),
-    SoftDropArgs(SoftDropArgs),
-    HorizontalArgs(HorizontalArgs),
-}
-
-fn player_action_list<'a>(
-    bob: &'a mut FlatBufferBuilder,
-    args_list: Vec<DomsActionArgs>,
-) -> Vec<PlayerAction<'a>> {
-    let mut out: Vec<PlayerAction<'a>> = Vec::new();
-    // for args in args_list.iter() {
-    //     //let mut bob: FlatBufferBuilder<'a> = FlatBufferBuilder::with_capacity(1024);
-    //     match args {
-    //         DomsActionArgs::RotateCWArgs(a) => {
-    //             let bob2 = bob;
-    //             let tmp = RotateCW::create(bob2, a);
-    //             bob2.finish(tmp, None);
-    //         }
-    //         DomsActionArgs::RotateCCWArgs(a) => {
-    //             let bob2 = bob;
-    //             let tmp = RotateCCW::create(bob2, a);
-    //             bob2.finish(tmp, None);
-    //         }
-    //         DomsActionArgs::Rotate180Args(a) => {
-    //             let bob2 = bob;
-    //             let tmp = Rotate180::create(bob2, a);
-    //             bob2.finish(tmp, None);
-    //         }
-    //         DomsActionArgs::HoldArgs(a) => {
-    //             let bob2 = bob;
-    //             let tmp = Hold::create(bob2, a);
-    //             bob2.finish(tmp, None);
-    //         }
-    //         DomsActionArgs::HardDropArgs(a) => {
-    //             let bob2 = bob;
-    //             let tmp = HardDrop::create(bob2, a);
-    //             bob2.finish(tmp, None);
-    //         }
-    //         DomsActionArgs::SoftDropArgs(a) => {
-    //             let bob2 = bob;
-    //             let tmp = SoftDrop::create(bob2, a);
-    //             bob2.finish(tmp, None);
-    //         }
-    //         DomsActionArgs::HorizontalArgs(a) => {
-    //             let bob2 = bob;
-    //             let tmp = Horizontal::create(bob2, a);
-    //             bob2.finish(tmp, None);
-    //         }
-    //     }
-    //     // bob.finish(root, file_identifier)
-    //     // let (buf, start) = bob.mut_finished_buffer();
-    //     // let buf2 = &buf[start..];
-    //     let buf = bob.finished_data();
-    //     // let buf2: [u8] = buf.iter().co;
-    //     let action: PlayerAction<'a> = flatbuffers::root::<PlayerAction<'a>>(buf).unwrap();
-    //     out.push(action);
-    // }
-    out
+fn split_two_board_ascii_art(two_board_ascii_art: &str) -> (String, String) {
+    let tmp: (Vec<&str>, Vec<&str>) = two_board_ascii_art
+        .split("\n")
+        .map(|line| line.split(">").collect::<Vec<&str>>())
+        .filter(|pair| pair.len() == 2)
+        .map(|mut pair| (pair.swap_remove(0), pair.swap_remove(0)))
+        .unzip();
+    (tmp.0.join("\n"), tmp.1.join("\n"))
 }
 
 fn test_player_action_leads_to_board(
-    action_args_list: Vec<PlayerActionArgs>,
+    actions: Vec<PlayerActionsT>,
     two_board_ascii_art: &str,
-) {
+) -> Result<(), Penalty> {
+    let (board_start_string, board_want_string) = split_two_board_ascii_art(two_board_ascii_art);
+    let mut board = Board::from_ascii_art(&board_start_string);
+    let want = Board::from_ascii_art(&board_want_string);
+    let mut bob = FlatBufferBuilder::with_capacity(1024);
+    for action in actions {
+        bob.reset();
+        let packed = PlayerActionT { action }.pack(&mut bob);
+        bob.finish(packed, None);
+        let buf = bob.finished_data();
+        let action2 = flatbuffers::root::<PlayerAction>(buf).unwrap();
+        match apply_action(&action2, &mut board) {
+            Ok(_) => (),
+            Err(x) => return Err(x),
+        }
+        // assert!(apply_action(&action2, &mut board).is_ok());
+    }
+    if board != want {
+        println!("got:\n{}", board);
+        println!("want:\n{}", want);
+        panic!();
+    }
+    // assert_eq!(board, want);
+    Ok(())
 }
 
-// #[cfg(test)]
-// #[test]
-// fn test_apply_hardDrop() {
-//     test_player_action_leads_to_board(!vec![HardDropArgs{}]
-//         "
-//     aaa
-//     ",
-//     );
-// }
+#[cfg(test)]
+#[test]
+fn test_apply_hard_drop() -> Result<(), Penalty> {
+    test_player_action_leads_to_board(
+        vec![PlayerActionsT::HardDrop(Box::new(HardDropT::default()))],
+        "
+    _|    |T  >  _|    |I 
+     |    |I  >   |    | 
+     |    |   >   | .  | 
+     |    |   >   |... | 
+    ",
+    )
+}
+#[cfg(test)]
+#[test]
+fn test_apply_hard_drop_TI() -> Result<(), Penalty> {
+    test_player_action_leads_to_board(
+        vec![
+            PlayerActionsT::HardDrop(Box::new(HardDropT::default())),
+            PlayerActionsT::HardDrop(Box::new(HardDropT::default())),
+        ],
+        "
+        _|    |T  >  _|    |
+         |    |I  >   |....|
+         |    |   >   | .  |
+         |    |   >   |... |
+        ",
+    )
+}
+
+#[cfg(test)]
+#[test]
+fn test_apply_hard_drop_J() -> Result<(), Penalty> {
+    test_player_action_leads_to_board(
+        vec![PlayerActionsT::HardDrop(Box::new(HardDropT::default()))],
+        "
+        _|    |J  >  _|    |
+         |    |   >   |    |
+         |    |   >   |.   |
+         |    |   >   |... |
+        ",
+    )
+}
 
 #[cfg(test)]
 #[test]

@@ -4,6 +4,7 @@
 		{
 			"type": "cargo",
 			"command": "test",
+			"args": ["--", "--color", "always", "--nocapture"],
 			"problemMatcher": [
 				"$rustc",
 				"$rust-panic"

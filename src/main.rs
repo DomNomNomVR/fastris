@@ -14,13 +14,6 @@ mod board;
 mod client_generated;
 pub use client_generated::fastris::client::PlayerAction;
 
-// import the generated code
-#[allow(dead_code, unused_imports)]
-#[allow(clippy::all)]
-mod myschema_generated;
-use flatbuffers::FlatBufferBuilder;
-use myschema_generated::users::{finish_user_buffer, root_as_user, User, UserArgs};
-
 fn main() {
     println!("hi");
 }
