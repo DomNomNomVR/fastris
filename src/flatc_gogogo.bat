@@ -1,0 +1,1 @@
+..\flatc.exe --rust --reflect-names --gen-mutable --gen-object-api --gen-compare --gen-name-strings .\client.fbs

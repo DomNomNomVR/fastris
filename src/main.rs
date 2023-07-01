@@ -1,12 +1,12 @@
 mod board;
 
-fn foo2(var: &mut i32) {
-    *var = 2;
-}
+// fn foo2(var: &mut i32) {
+//     *var = 2;
+// }
 
-fn foo3(var: &mut i32) {
-    *var = 3;
-}
+// fn foo3(var: &mut i32) {
+//     *var = 3;
+// }
 
 // import the generated code
 #[allow(dead_code, unused_imports)]
@@ -14,11 +14,15 @@ fn foo3(var: &mut i32) {
 mod client_generated;
 pub use client_generated::fastris::client::PlayerAction;
 
+// import the generated code
+#[allow(dead_code, unused_imports)]
+#[allow(clippy::all)]
+mod myschema_generated;
+use flatbuffers::FlatBufferBuilder;
+use myschema_generated::users::{finish_user_buffer, root_as_user, User, UserArgs};
+
 fn main() {
-    let mut i = 1i32;
-    foo2(&mut i);
-    foo3(&mut i);
-    println!("{}", i);
+    println!("hi");
 }
 
 // #[cfg(test)]

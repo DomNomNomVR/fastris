@@ -242,6 +242,197 @@ impl<'a> flatbuffers::Verifiable for PlayerActions {
 impl flatbuffers::SimpleToVerifyInSlice for PlayerActions {}
 pub struct PlayerActionsUnionTableOffset {}
 
+#[allow(clippy::upper_case_acronyms)]
+#[non_exhaustive]
+#[derive(Debug, Clone, PartialEq)]
+pub enum PlayerActionsT {
+  NONE,
+  RotateCW(Box<RotateCWT>),
+  RotateCCW(Box<RotateCCWT>),
+  Rotate180(Box<Rotate180T>),
+  Hold(Box<HoldT>),
+  HardDrop(Box<HardDropT>),
+  SoftDrop(Box<SoftDropT>),
+  Horizontal(Box<HorizontalT>),
+}
+impl Default for PlayerActionsT {
+  fn default() -> Self {
+    Self::NONE
+  }
+}
+impl PlayerActionsT {
+  pub fn player_actions_type(&self) -> PlayerActions {
+    match self {
+      Self::NONE => PlayerActions::NONE,
+      Self::RotateCW(_) => PlayerActions::RotateCW,
+      Self::RotateCCW(_) => PlayerActions::RotateCCW,
+      Self::Rotate180(_) => PlayerActions::Rotate180,
+      Self::Hold(_) => PlayerActions::Hold,
+      Self::HardDrop(_) => PlayerActions::HardDrop,
+      Self::SoftDrop(_) => PlayerActions::SoftDrop,
+      Self::Horizontal(_) => PlayerActions::Horizontal,
+    }
+  }
+  pub fn pack(&self, fbb: &mut flatbuffers::FlatBufferBuilder) -> Option<flatbuffers::WIPOffset<flatbuffers::UnionWIPOffset>> {
+    match self {
+      Self::NONE => None,
+      Self::RotateCW(v) => Some(v.pack(fbb).as_union_value()),
+      Self::RotateCCW(v) => Some(v.pack(fbb).as_union_value()),
+      Self::Rotate180(v) => Some(v.pack(fbb).as_union_value()),
+      Self::Hold(v) => Some(v.pack(fbb).as_union_value()),
+      Self::HardDrop(v) => Some(v.pack(fbb).as_union_value()),
+      Self::SoftDrop(v) => Some(v.pack(fbb).as_union_value()),
+      Self::Horizontal(v) => Some(v.pack(fbb).as_union_value()),
+    }
+  }
+  /// If the union variant matches, return the owned RotateCWT, setting the union to NONE.
+  pub fn take_rotate_cw(&mut self) -> Option<Box<RotateCWT>> {
+    if let Self::RotateCW(_) = self {
+      let v = core::mem::replace(self, Self::NONE);
+      if let Self::RotateCW(w) = v {
+        Some(w)
+      } else {
+        unreachable!()
+      }
+    } else {
+      None
+    }
+  }
+  /// If the union variant matches, return a reference to the RotateCWT.
+  pub fn as_rotate_cw(&self) -> Option<&RotateCWT> {
+    if let Self::RotateCW(v) = self { Some(v.as_ref()) } else { None }
+  }
+  /// If the union variant matches, return a mutable reference to the RotateCWT.
+  pub fn as_rotate_cw_mut(&mut self) -> Option<&mut RotateCWT> {
+    if let Self::RotateCW(v) = self { Some(v.as_mut()) } else { None }
+  }
+  /// If the union variant matches, return the owned RotateCCWT, setting the union to NONE.
+  pub fn take_rotate_ccw(&mut self) -> Option<Box<RotateCCWT>> {
+    if let Self::RotateCCW(_) = self {
+      let v = core::mem::replace(self, Self::NONE);
+      if let Self::RotateCCW(w) = v {
+        Some(w)
+      } else {
+        unreachable!()
+      }
+    } else {
+      None
+    }
+  }
+  /// If the union variant matches, return a reference to the RotateCCWT.
+  pub fn as_rotate_ccw(&self) -> Option<&RotateCCWT> {
+    if let Self::RotateCCW(v) = self { Some(v.as_ref()) } else { None }
+  }
+  /// If the union variant matches, return a mutable reference to the RotateCCWT.
+  pub fn as_rotate_ccw_mut(&mut self) -> Option<&mut RotateCCWT> {
+    if let Self::RotateCCW(v) = self { Some(v.as_mut()) } else { None }
+  }
+  /// If the union variant matches, return the owned Rotate180T, setting the union to NONE.
+  pub fn take_rotate_180(&mut self) -> Option<Box<Rotate180T>> {
+    if let Self::Rotate180(_) = self {
+      let v = core::mem::replace(self, Self::NONE);
+      if let Self::Rotate180(w) = v {
+        Some(w)
+      } else {
+        unreachable!()
+      }
+    } else {
+      None
+    }
+  }
+  /// If the union variant matches, return a reference to the Rotate180T.
+  pub fn as_rotate_180(&self) -> Option<&Rotate180T> {
+    if let Self::Rotate180(v) = self { Some(v.as_ref()) } else { None }
+  }
+  /// If the union variant matches, return a mutable reference to the Rotate180T.
+  pub fn as_rotate_180_mut(&mut self) -> Option<&mut Rotate180T> {
+    if let Self::Rotate180(v) = self { Some(v.as_mut()) } else { None }
+  }
+  /// If the union variant matches, return the owned HoldT, setting the union to NONE.
+  pub fn take_hold(&mut self) -> Option<Box<HoldT>> {
+    if let Self::Hold(_) = self {
+      let v = core::mem::replace(self, Self::NONE);
+      if let Self::Hold(w) = v {
+        Some(w)
+      } else {
+        unreachable!()
+      }
+    } else {
+      None
+    }
+  }
+  /// If the union variant matches, return a reference to the HoldT.
+  pub fn as_hold(&self) -> Option<&HoldT> {
+    if let Self::Hold(v) = self { Some(v.as_ref()) } else { None }
+  }
+  /// If the union variant matches, return a mutable reference to the HoldT.
+  pub fn as_hold_mut(&mut self) -> Option<&mut HoldT> {
+    if let Self::Hold(v) = self { Some(v.as_mut()) } else { None }
+  }
+  /// If the union variant matches, return the owned HardDropT, setting the union to NONE.
+  pub fn take_hard_drop(&mut self) -> Option<Box<HardDropT>> {
+    if let Self::HardDrop(_) = self {
+      let v = core::mem::replace(self, Self::NONE);
+      if let Self::HardDrop(w) = v {
+        Some(w)
+      } else {
+        unreachable!()
+      }
+    } else {
+      None
+    }
+  }
+  /// If the union variant matches, return a reference to the HardDropT.
+  pub fn as_hard_drop(&self) -> Option<&HardDropT> {
+    if let Self::HardDrop(v) = self { Some(v.as_ref()) } else { None }
+  }
+  /// If the union variant matches, return a mutable reference to the HardDropT.
+  pub fn as_hard_drop_mut(&mut self) -> Option<&mut HardDropT> {
+    if let Self::HardDrop(v) = self { Some(v.as_mut()) } else { None }
+  }
+  /// If the union variant matches, return the owned SoftDropT, setting the union to NONE.
+  pub fn take_soft_drop(&mut self) -> Option<Box<SoftDropT>> {
+    if let Self::SoftDrop(_) = self {
+      let v = core::mem::replace(self, Self::NONE);
+      if let Self::SoftDrop(w) = v {
+        Some(w)
+      } else {
+        unreachable!()
+      }
+    } else {
+      None
+    }
+  }
+  /// If the union variant matches, return a reference to the SoftDropT.
+  pub fn as_soft_drop(&self) -> Option<&SoftDropT> {
+    if let Self::SoftDrop(v) = self { Some(v.as_ref()) } else { None }
+  }
+  /// If the union variant matches, return a mutable reference to the SoftDropT.
+  pub fn as_soft_drop_mut(&mut self) -> Option<&mut SoftDropT> {
+    if let Self::SoftDrop(v) = self { Some(v.as_mut()) } else { None }
+  }
+  /// If the union variant matches, return the owned HorizontalT, setting the union to NONE.
+  pub fn take_horizontal(&mut self) -> Option<Box<HorizontalT>> {
+    if let Self::Horizontal(_) = self {
+      let v = core::mem::replace(self, Self::NONE);
+      if let Self::Horizontal(w) = v {
+        Some(w)
+      } else {
+        unreachable!()
+      }
+    } else {
+      None
+    }
+  }
+  /// If the union variant matches, return a reference to the HorizontalT.
+  pub fn as_horizontal(&self) -> Option<&HorizontalT> {
+    if let Self::Horizontal(v) = self { Some(v.as_ref()) } else { None }
+  }
+  /// If the union variant matches, return a mutable reference to the HorizontalT.
+  pub fn as_horizontal_mut(&mut self) -> Option<&mut HorizontalT> {
+    if let Self::Horizontal(v) = self { Some(v.as_mut()) } else { None }
+  }
+}
 pub enum RotateCWOffset {}
 #[derive(Copy, Clone, PartialEq)]
 
@@ -259,6 +450,10 @@ impl<'a> flatbuffers::Follow<'a> for RotateCW<'a> {
 
 impl<'a> RotateCW<'a> {
 
+  pub const fn get_fully_qualified_name() -> &'static str {
+    "Fastris.Client.RotateCW"
+  }
+
   #[inline]
   pub unsafe fn init_from_table(table: flatbuffers::Table<'a>) -> Self {
     RotateCW { _tab: table }
@@ -272,6 +467,10 @@ impl<'a> RotateCW<'a> {
     builder.finish()
   }
 
+  pub fn unpack(&self) -> RotateCWT {
+    RotateCWT {
+    }
+  }
 }
 
 impl flatbuffers::Verifiable for RotateCW<'_> {
@@ -321,6 +520,25 @@ impl core::fmt::Debug for RotateCW<'_> {
       ds.finish()
   }
 }
+#[non_exhaustive]
+#[derive(Debug, Clone, PartialEq)]
+pub struct RotateCWT {
+}
+impl Default for RotateCWT {
+  fn default() -> Self {
+    Self {
+    }
+  }
+}
+impl RotateCWT {
+  pub fn pack<'b>(
+    &self,
+    _fbb: &mut flatbuffers::FlatBufferBuilder<'b>
+  ) -> flatbuffers::WIPOffset<RotateCW<'b>> {
+    RotateCW::create(_fbb, &RotateCWArgs{
+    })
+  }
+}
 pub enum RotateCCWOffset {}
 #[derive(Copy, Clone, PartialEq)]
 
@@ -338,6 +556,10 @@ impl<'a> flatbuffers::Follow<'a> for RotateCCW<'a> {
 
 impl<'a> RotateCCW<'a> {
 
+  pub const fn get_fully_qualified_name() -> &'static str {
+    "Fastris.Client.RotateCCW"
+  }
+
   #[inline]
   pub unsafe fn init_from_table(table: flatbuffers::Table<'a>) -> Self {
     RotateCCW { _tab: table }
@@ -351,6 +573,10 @@ impl<'a> RotateCCW<'a> {
     builder.finish()
   }
 
+  pub fn unpack(&self) -> RotateCCWT {
+    RotateCCWT {
+    }
+  }
 }
 
 impl flatbuffers::Verifiable for RotateCCW<'_> {
@@ -400,6 +626,25 @@ impl core::fmt::Debug for RotateCCW<'_> {
       ds.finish()
   }
 }
+#[non_exhaustive]
+#[derive(Debug, Clone, PartialEq)]
+pub struct RotateCCWT {
+}
+impl Default for RotateCCWT {
+  fn default() -> Self {
+    Self {
+    }
+  }
+}
+impl RotateCCWT {
+  pub fn pack<'b>(
+    &self,
+    _fbb: &mut flatbuffers::FlatBufferBuilder<'b>
+  ) -> flatbuffers::WIPOffset<RotateCCW<'b>> {
+    RotateCCW::create(_fbb, &RotateCCWArgs{
+    })
+  }
+}
 pub enum Rotate180Offset {}
 #[derive(Copy, Clone, PartialEq)]
 
@@ -417,6 +662,10 @@ impl<'a> flatbuffers::Follow<'a> for Rotate180<'a> {
 
 impl<'a> Rotate180<'a> {
 
+  pub const fn get_fully_qualified_name() -> &'static str {
+    "Fastris.Client.Rotate180"
+  }
+
   #[inline]
   pub unsafe fn init_from_table(table: flatbuffers::Table<'a>) -> Self {
     Rotate180 { _tab: table }
@@ -430,6 +679,10 @@ impl<'a> Rotate180<'a> {
     builder.finish()
   }
 
+  pub fn unpack(&self) -> Rotate180T {
+    Rotate180T {
+    }
+  }
 }
 
 impl flatbuffers::Verifiable for Rotate180<'_> {
@@ -479,6 +732,25 @@ impl core::fmt::Debug for Rotate180<'_> {
       ds.finish()
   }
 }
+#[non_exhaustive]
+#[derive(Debug, Clone, PartialEq)]
+pub struct Rotate180T {
+}
+impl Default for Rotate180T {
+  fn default() -> Self {
+    Self {
+    }
+  }
+}
+impl Rotate180T {
+  pub fn pack<'b>(
+    &self,
+    _fbb: &mut flatbuffers::FlatBufferBuilder<'b>
+  ) -> flatbuffers::WIPOffset<Rotate180<'b>> {
+    Rotate180::create(_fbb, &Rotate180Args{
+    })
+  }
+}
 pub enum HoldOffset {}
 #[derive(Copy, Clone, PartialEq)]
 
@@ -496,6 +768,10 @@ impl<'a> flatbuffers::Follow<'a> for Hold<'a> {
 
 impl<'a> Hold<'a> {
 
+  pub const fn get_fully_qualified_name() -> &'static str {
+    "Fastris.Client.Hold"
+  }
+
   #[inline]
   pub unsafe fn init_from_table(table: flatbuffers::Table<'a>) -> Self {
     Hold { _tab: table }
@@ -509,6 +785,10 @@ impl<'a> Hold<'a> {
     builder.finish()
   }
 
+  pub fn unpack(&self) -> HoldT {
+    HoldT {
+    }
+  }
 }
 
 impl flatbuffers::Verifiable for Hold<'_> {
@@ -558,6 +838,25 @@ impl core::fmt::Debug for Hold<'_> {
       ds.finish()
   }
 }
+#[non_exhaustive]
+#[derive(Debug, Clone, PartialEq)]
+pub struct HoldT {
+}
+impl Default for HoldT {
+  fn default() -> Self {
+    Self {
+    }
+  }
+}
+impl HoldT {
+  pub fn pack<'b>(
+    &self,
+    _fbb: &mut flatbuffers::FlatBufferBuilder<'b>
+  ) -> flatbuffers::WIPOffset<Hold<'b>> {
+    Hold::create(_fbb, &HoldArgs{
+    })
+  }
+}
 pub enum HardDropOffset {}
 #[derive(Copy, Clone, PartialEq)]
 
@@ -575,6 +874,10 @@ impl<'a> flatbuffers::Follow<'a> for HardDrop<'a> {
 
 impl<'a> HardDrop<'a> {
 
+  pub const fn get_fully_qualified_name() -> &'static str {
+    "Fastris.Client.HardDrop"
+  }
+
   #[inline]
   pub unsafe fn init_from_table(table: flatbuffers::Table<'a>) -> Self {
     HardDrop { _tab: table }
@@ -588,6 +891,10 @@ impl<'a> HardDrop<'a> {
     builder.finish()
   }
 
+  pub fn unpack(&self) -> HardDropT {
+    HardDropT {
+    }
+  }
 }
 
 impl flatbuffers::Verifiable for HardDrop<'_> {
@@ -637,6 +944,25 @@ impl core::fmt::Debug for HardDrop<'_> {
       ds.finish()
   }
 }
+#[non_exhaustive]
+#[derive(Debug, Clone, PartialEq)]
+pub struct HardDropT {
+}
+impl Default for HardDropT {
+  fn default() -> Self {
+    Self {
+    }
+  }
+}
+impl HardDropT {
+  pub fn pack<'b>(
+    &self,
+    _fbb: &mut flatbuffers::FlatBufferBuilder<'b>
+  ) -> flatbuffers::WIPOffset<HardDrop<'b>> {
+    HardDrop::create(_fbb, &HardDropArgs{
+    })
+  }
+}
 pub enum SoftDropOffset {}
 #[derive(Copy, Clone, PartialEq)]
 
@@ -655,6 +981,10 @@ impl<'a> flatbuffers::Follow<'a> for SoftDrop<'a> {
 impl<'a> SoftDrop<'a> {
   pub const VT_REPEATS: flatbuffers::VOffsetT = 4;
 
+  pub const fn get_fully_qualified_name() -> &'static str {
+    "Fastris.Client.SoftDrop"
+  }
+
   #[inline]
   pub unsafe fn init_from_table(table: flatbuffers::Table<'a>) -> Self {
     SoftDrop { _tab: table }
@@ -669,6 +999,12 @@ impl<'a> SoftDrop<'a> {
     builder.finish()
   }
 
+  pub fn unpack(&self) -> SoftDropT {
+    let repeats = self.repeats();
+    SoftDropT {
+      repeats,
+    }
+  }
 
   #[inline]
   pub fn repeats(&self) -> u16 {
@@ -734,6 +1070,29 @@ impl core::fmt::Debug for SoftDrop<'_> {
       ds.finish()
   }
 }
+#[non_exhaustive]
+#[derive(Debug, Clone, PartialEq)]
+pub struct SoftDropT {
+  pub repeats: u16,
+}
+impl Default for SoftDropT {
+  fn default() -> Self {
+    Self {
+      repeats: 0,
+    }
+  }
+}
+impl SoftDropT {
+  pub fn pack<'b>(
+    &self,
+    _fbb: &mut flatbuffers::FlatBufferBuilder<'b>
+  ) -> flatbuffers::WIPOffset<SoftDrop<'b>> {
+    let repeats = self.repeats;
+    SoftDrop::create(_fbb, &SoftDropArgs{
+      repeats,
+    })
+  }
+}
 pub enum HorizontalOffset {}
 #[derive(Copy, Clone, PartialEq)]
 
@@ -752,6 +1111,10 @@ impl<'a> flatbuffers::Follow<'a> for Horizontal<'a> {
 impl<'a> Horizontal<'a> {
   pub const VT_RIGHT: flatbuffers::VOffsetT = 4;
 
+  pub const fn get_fully_qualified_name() -> &'static str {
+    "Fastris.Client.Horizontal"
+  }
+
   #[inline]
   pub unsafe fn init_from_table(table: flatbuffers::Table<'a>) -> Self {
     Horizontal { _tab: table }
@@ -766,6 +1129,12 @@ impl<'a> Horizontal<'a> {
     builder.finish()
   }
 
+  pub fn unpack(&self) -> HorizontalT {
+    let right = self.right();
+    HorizontalT {
+      right,
+    }
+  }
 
   #[inline]
   pub fn right(&self) -> i8 {
@@ -831,6 +1200,29 @@ impl core::fmt::Debug for Horizontal<'_> {
       ds.finish()
   }
 }
+#[non_exhaustive]
+#[derive(Debug, Clone, PartialEq)]
+pub struct HorizontalT {
+  pub right: i8,
+}
+impl Default for HorizontalT {
+  fn default() -> Self {
+    Self {
+      right: 0,
+    }
+  }
+}
+impl HorizontalT {
+  pub fn pack<'b>(
+    &self,
+    _fbb: &mut flatbuffers::FlatBufferBuilder<'b>
+  ) -> flatbuffers::WIPOffset<Horizontal<'b>> {
+    let right = self.right;
+    Horizontal::create(_fbb, &HorizontalArgs{
+      right,
+    })
+  }
+}
 pub enum PlayerActionOffset {}
 #[derive(Copy, Clone, PartialEq)]
 
@@ -850,6 +1242,10 @@ impl<'a> PlayerAction<'a> {
   pub const VT_ACTION_TYPE: flatbuffers::VOffsetT = 4;
   pub const VT_ACTION: flatbuffers::VOffsetT = 6;
 
+  pub const fn get_fully_qualified_name() -> &'static str {
+    "Fastris.Client.PlayerAction"
+  }
+
   #[inline]
   pub unsafe fn init_from_table(table: flatbuffers::Table<'a>) -> Self {
     PlayerAction { _tab: table }
@@ -865,6 +1261,50 @@ impl<'a> PlayerAction<'a> {
     builder.finish()
   }
 
+  pub fn unpack(&self) -> PlayerActionT {
+    let action = match self.action_type() {
+      PlayerActions::NONE => PlayerActionsT::NONE,
+      PlayerActions::RotateCW => PlayerActionsT::RotateCW(Box::new(
+        self.action_as_rotate_cw()
+            .expect("Invalid union table, expected `PlayerActions::RotateCW`.")
+            .unpack()
+      )),
+      PlayerActions::RotateCCW => PlayerActionsT::RotateCCW(Box::new(
+        self.action_as_rotate_ccw()
+            .expect("Invalid union table, expected `PlayerActions::RotateCCW`.")
+            .unpack()
+      )),
+      PlayerActions::Rotate180 => PlayerActionsT::Rotate180(Box::new(
+        self.action_as_rotate_180()
+            .expect("Invalid union table, expected `PlayerActions::Rotate180`.")
+            .unpack()
+      )),
+      PlayerActions::Hold => PlayerActionsT::Hold(Box::new(
+        self.action_as_hold()
+            .expect("Invalid union table, expected `PlayerActions::Hold`.")
+            .unpack()
+      )),
+      PlayerActions::HardDrop => PlayerActionsT::HardDrop(Box::new(
+        self.action_as_hard_drop()
+            .expect("Invalid union table, expected `PlayerActions::HardDrop`.")
+            .unpack()
+      )),
+      PlayerActions::SoftDrop => PlayerActionsT::SoftDrop(Box::new(
+        self.action_as_soft_drop()
+            .expect("Invalid union table, expected `PlayerActions::SoftDrop`.")
+            .unpack()
+      )),
+      PlayerActions::Horizontal => PlayerActionsT::Horizontal(Box::new(
+        self.action_as_horizontal()
+            .expect("Invalid union table, expected `PlayerActions::Horizontal`.")
+            .unpack()
+      )),
+      _ => PlayerActionsT::NONE,
+    };
+    PlayerActionT {
+      action,
+    }
+  }
 
   #[inline]
   pub fn action_type(&self) -> PlayerActions {
@@ -1112,6 +1552,31 @@ impl core::fmt::Debug for PlayerAction<'_> {
         },
       };
       ds.finish()
+  }
+}
+#[non_exhaustive]
+#[derive(Debug, Clone, PartialEq)]
+pub struct PlayerActionT {
+  pub action: PlayerActionsT,
+}
+impl Default for PlayerActionT {
+  fn default() -> Self {
+    Self {
+      action: PlayerActionsT::NONE,
+    }
+  }
+}
+impl PlayerActionT {
+  pub fn pack<'b>(
+    &self,
+    _fbb: &mut flatbuffers::FlatBufferBuilder<'b>
+  ) -> flatbuffers::WIPOffset<PlayerAction<'b>> {
+    let action_type = self.action.player_actions_type();
+    let action = self.action.pack(_fbb);
+    PlayerAction::create(_fbb, &PlayerActionArgs{
+      action_type,
+      action,
+    })
   }
 }
 }  // pub mod Client
