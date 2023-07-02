@@ -1,5 +1,5 @@
 use std::{
-    cmp::max,
+    cmp::{max, min},
     collections::{HashMap, VecDeque},
 };
 
@@ -107,8 +107,8 @@ struct Kick {
     y: i32,
 }
 
-fn mask_from_mino(m: &Mino, b: &Board) -> Result<MinoMask, Penalty> {
-    let shift_to_pivot = b.width - 1 - m.pivot_x;
+fn mask_from_mino(m: &Mino, board_width: i8) -> Result<MinoMask, Penalty> {
+    let shift_to_pivot = board_width - 1 - m.pivot_x;
     // https://tetris.wiki/Super_Rotation_System#How_Guideline_SRS_Really_Works
     // The following match statement is effectively encoding this table:
     // https://tetris.wiki/images/1/17/SRS-true-rotations.png
@@ -667,7 +667,7 @@ fn apply_hard_drop(a: &HardDrop, board: &mut Board) -> Result<u8, Penalty> {
         return Err(Penalty::new("Trying to hard drop without an active piece"));
     }
     let mino = board.active_mino.as_ref().unwrap();
-    let mut mask = mask_from_mino(mino, board)?;
+    let mut mask = mask_from_mino(mino, board.width)?;
     // test each place going down
     // TODO: optimization about traversing many empty rows
     // note: we assume it currently doesn't intersect.
@@ -713,6 +713,26 @@ fn apply_horizontal(a: &Horizontal, board: &mut Board) -> Result<u8, Penalty> {
             return Err(Penalty::new("trying to go past right edge"));
         }
     }
+
+    // only do more expensive check if there's something we could intesect with on the bottom row.
+    // TODO: maybe there's performance increases if we just do `2` instead of `squares_below_pivot()`
+    if board.rows[mino.pivot_y - mino.squares_below_pivot() as usize] != 0 {
+        let x0 = mino.pivot_x;
+        let x1 = new_pivot_x;
+        // TODO: optimizaiton: achieve things via just bit shifting the mask.
+        for x in min(x0, x1)..=max(x0, x1) {
+            mino.pivot_x = x;
+            let mut mask = mask_from_mino(mino, board.width)?;
+            for i in 0..4usize {
+                if board.rows[mask.bottom_row + i] & mask.covered[i] != 0 {
+                    mino.pivot_x = x0; // revert state changes
+                    return Err(Penalty::new("colliding with existing piece"));
+                }
+            }
+        }
+    }
+
+    mino.pivot_x = new_pivot_x;
 
     // check intersections with boundaries
     Ok(0)
