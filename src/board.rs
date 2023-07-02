@@ -95,6 +95,9 @@ impl Mino {
     fn squares_below_pivot(&self) -> i8 {
         Mino::squares_right_of_pivot_(&self.mino_type, &self.orientation.rotate_ccw())
     }
+    fn squares_above_pivot(&self) -> i8 {
+        Mino::squares_right_of_pivot_(&self.mino_type, &self.orientation.rotate_cw())
+    }
 }
 
 struct MinoMask {
@@ -468,13 +471,36 @@ impl std::fmt::Display for Board {
             self.spawn_height,
             match &self.active_mino {
                 None => 0,
-                Some(m) => m.pivot_y + 4,
+                Some(m) => m.pivot_y + m.squares_above_pivot() as usize,
             },
         );
         let hold_piece_y = if self.spawn_height > 4 {
             self.spawn_height - 2usize
         } else {
             self.spawn_height - 1usize
+        };
+
+        let mask_maybe: Option<MinoMask> = match &self.active_mino {
+            Some(mino) => Some(mask_from_mino(mino, self.width).expect("blah")),
+            None => None,
+        };
+        let paint_mask = |x: i8, y: usize| -> char {
+            match &mask_maybe {
+                None => ' ',
+                Some(mask) => {
+                    let mino = self.active_mino.as_ref().unwrap();
+                    if mino.pivot_x == x && mino.pivot_y == y {
+                        return 'x';
+                    }
+                    if mask.bottom_row <= y
+                        && y < mask.bottom_row + 4
+                        && mask.covered[y - mask.bottom_row] & 1 << self.width - x - 1 > 0
+                    {
+                        return '#';
+                    }
+                    ' '
+                }
+            }
         };
         for y in (0..=max_y).rev() {
             // SpawnHeight and hold
@@ -501,8 +527,8 @@ impl std::fmt::Display for Board {
                     f,
                     "{}",
                     match self.rows[y] & 1 << self.width - x - 1 {
-                        0 => " ",
-                        _ => ".",
+                        0 => paint_mask(x, y),
+                        _ => '.',
                     }
                 )?;
             }
@@ -612,6 +638,15 @@ fn apply_rotate180(a: &Rotate180, board: &mut Board) -> Result<u8, Penalty> {
     Ok(0)
 }
 fn apply_hold(a: &Hold, board: &mut Board) -> Result<u8, Penalty> {
+    let hold = match &board.active_mino {
+        Some(mino) => Some(mino.mino_type),
+        None => None,
+    };
+    board.active_mino = match board.hold {
+        None => None,
+        Some(mino_type) => Some(spawn_mino(mino_type, board)),
+    };
+    board.hold = hold;
     Ok(0)
 }
 fn test_intersection(mask: &MinoMask, board: &Board) -> bool {
@@ -785,6 +820,34 @@ fn horizontal(right: i8) -> PlayerActionsT {
     PlayerActionsT::Horizontal(Box::new(HorizontalT { right: right }))
 }
 
+#[cfg(test)]
+#[test]
+fn test_apply_hold() -> Result<(), Penalty> {
+    test_player_action_leads_to_board(
+        vec![hold()],
+        "
+    _|    |T  >  _|    | 
+     |    |   >  T|    | 
+     |    |   >   |    | 
+    ",
+    )?;
+    test_player_action_leads_to_board(
+        vec![hold(), hold(), hard_drop()],
+        "
+    _|    |T  >  _|    | 
+     |    |Z  >  Z| .  | 
+     |    |   >   |... | 
+    ",
+    )?;
+    test_player_action_leads_to_board(
+        vec![hold(), hard_drop()],
+        "
+    _|    |T  >  _|    | 
+     |    |Z  >  T|..  | 
+     |    |   >   | .. | 
+    ",
+    )
+}
 #[cfg(test)]
 #[test]
 fn test_apply_horizontal() -> Result<(), Penalty> {
