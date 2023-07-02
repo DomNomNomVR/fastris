@@ -755,6 +755,22 @@ fn test_oritentation_rotation() {
 
 #[cfg(test)]
 #[test]
+fn test_apply_horizontal() -> Result<(), Penalty> {
+    test_player_action_leads_to_board(
+        vec![
+            PlayerActionsT::Horizontal(Box::new(HorizontalT { right: 1 })),
+            PlayerActionsT::HardDrop(Box::new(HardDropT {})),
+        ],
+        "
+    _|    |T  >  _|    | 
+     |    |   >   |  . | 
+     |    |   >   | ...| 
+    ",
+    )
+}
+
+#[cfg(test)]
+#[test]
 fn test_apply_hard_drop() -> Result<(), Penalty> {
     test_player_action_leads_to_board(
         vec![PlayerActionsT::HardDrop(Box::new(HardDropT::default()))],
