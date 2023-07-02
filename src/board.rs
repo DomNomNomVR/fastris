@@ -211,6 +211,138 @@ fn mask_from_mino(m: &Mino, b: &Board) -> Result<MinoMask, Penalty> {
                 })
             }
         },
+        MinoType::S => match m.orientation {
+            Orientation::Up => Ok(MinoMask {
+                covered: [
+                    0b110 << (shift_to_pivot - 1),
+                    0b011 << (shift_to_pivot - 1),
+                    0,
+                    0,
+                ],
+                bottom_row: m.pivot_y,
+            }),
+            Orientation::Down => Ok(MinoMask {
+                covered: [
+                    0b110 << (shift_to_pivot - 1),
+                    0b011 << (shift_to_pivot - 1),
+                    0,
+                    0,
+                ],
+                bottom_row: m.pivot_y - 1,
+            }),
+            Orientation::Right => {
+                let single_bit = 1u16 << (shift_to_pivot);
+                Ok(MinoMask {
+                    covered: [
+                        0b01 << (shift_to_pivot - 1),
+                        0b11 << (shift_to_pivot - 1),
+                        0b10 << (shift_to_pivot - 1),
+                        0,
+                    ],
+                    bottom_row: (m.pivot_y - 1),
+                })
+            }
+            Orientation::Left => {
+                let single_bit = 1u16 << (shift_to_pivot);
+                Ok(MinoMask {
+                    covered: [
+                        0b01 << shift_to_pivot,
+                        0b11 << shift_to_pivot,
+                        0b10 << shift_to_pivot,
+                        0,
+                    ],
+                    bottom_row: (m.pivot_y - 1),
+                })
+            }
+        },
+        MinoType::Z => match m.orientation {
+            Orientation::Up => Ok(MinoMask {
+                covered: [
+                    0b011 << (shift_to_pivot - 1),
+                    0b110 << (shift_to_pivot - 1),
+                    0,
+                    0,
+                ],
+                bottom_row: m.pivot_y,
+            }),
+            Orientation::Down => Ok(MinoMask {
+                covered: [
+                    0b011 << (shift_to_pivot - 1),
+                    0b110 << (shift_to_pivot - 1),
+                    0,
+                    0,
+                ],
+                bottom_row: m.pivot_y - 1,
+            }),
+            Orientation::Right => {
+                let single_bit = 1u16 << (shift_to_pivot);
+                Ok(MinoMask {
+                    covered: [
+                        0b10 << (shift_to_pivot - 1),
+                        0b11 << (shift_to_pivot - 1),
+                        0b01 << (shift_to_pivot - 1),
+                        0,
+                    ],
+                    bottom_row: (m.pivot_y - 1),
+                })
+            }
+            Orientation::Left => {
+                let single_bit = 1u16 << (shift_to_pivot);
+                Ok(MinoMask {
+                    covered: [
+                        0b10 << shift_to_pivot,
+                        0b11 << shift_to_pivot,
+                        0b01 << shift_to_pivot,
+                        0,
+                    ],
+                    bottom_row: (m.pivot_y - 1),
+                })
+            }
+        },
+        MinoType::O => match m.orientation {
+            Orientation::Up => Ok(MinoMask {
+                covered: [
+                    0b11 << (shift_to_pivot - 1),
+                    0b11 << (shift_to_pivot - 1),
+                    0,
+                    0,
+                ],
+                bottom_row: m.pivot_y,
+            }),
+            Orientation::Down => Ok(MinoMask {
+                covered: [
+                    0b11 << (shift_to_pivot - 0),
+                    0b11 << (shift_to_pivot - 0),
+                    0,
+                    0,
+                ],
+                bottom_row: m.pivot_y - 1,
+            }),
+            Orientation::Right => {
+                let single_bit = 1u16 << (shift_to_pivot);
+                Ok(MinoMask {
+                    covered: [
+                        0b11 << (shift_to_pivot - 0),
+                        0b11 << (shift_to_pivot - 0),
+                        0,
+                        0,
+                    ],
+                    bottom_row: m.pivot_y - 1,
+                })
+            }
+            Orientation::Left => {
+                let single_bit = 1u16 << (shift_to_pivot);
+                Ok(MinoMask {
+                    covered: [
+                        0b11 << (shift_to_pivot - 1),
+                        0b11 << (shift_to_pivot - 1),
+                        0,
+                        0,
+                    ],
+                    bottom_row: m.pivot_y - 0,
+                })
+            }
+        },
 
         _ => Err(Penalty::new("dom sucks")),
     }
@@ -292,15 +424,15 @@ impl Board {
             if board.width == 0 {
                 board.width = row.len();
             } else {
-                let mut row_int: u16 = 0;
-                assert_eq!(board.width, row.len());
-                for x in 0..board.width {
-                    if row[x] != ' ' {
-                        row_int |= 1 << board.width - 1 - x;
-                    }
-                }
-                board.rows[row_i] = row_int;
+                assert_eq!(board.width, row.len()); // all rows must be same length
             }
+            let mut row_int: u16 = 0;
+            for x in 0..board.width {
+                if row[x] != ' ' {
+                    row_int |= 1 << board.width - 1 - x;
+                }
+            }
+            board.rows[row_i] = row_int;
 
             // parse upcoming queue
             let upcoming_maybe = segments[2].trim_matches(char::is_whitespace);
@@ -585,6 +717,22 @@ fn test_apply_hard_drop_TI() -> Result<(), Penalty> {
         ",
     )
 }
+#[cfg(test)]
+#[test]
+fn test_apply_hard_drop_TO() -> Result<(), Penalty> {
+    test_player_action_leads_to_board(
+        vec![
+            PlayerActionsT::HardDrop(Box::new(HardDropT::default())),
+            PlayerActionsT::HardDrop(Box::new(HardDropT::default())),
+        ],
+        "
+        _|    |T  >  _| .. |
+         |    |O  >   | .. |
+         |    |   >   | .  |
+         |    |   >   |... |
+        ",
+    )
+}
 
 #[cfg(test)]
 #[test]
@@ -596,6 +744,46 @@ fn test_apply_hard_drop_J() -> Result<(), Penalty> {
          |    |   >   |    |
          |    |   >   |.   |
          |    |   >   |... |
+        ",
+    )
+}
+
+#[cfg(test)]
+#[test]
+fn test_apply_hard_drop_L() -> Result<(), Penalty> {
+    test_player_action_leads_to_board(
+        vec![PlayerActionsT::HardDrop(Box::new(HardDropT::default()))],
+        "
+        _|    |L  >  _|    |
+         |    |   >   |    |
+         |    |   >   |  . |
+         |    |   >   |... |
+        ",
+    )
+}
+#[cfg(test)]
+#[test]
+fn test_apply_hard_drop_S() -> Result<(), Penalty> {
+    test_player_action_leads_to_board(
+        vec![PlayerActionsT::HardDrop(Box::new(HardDropT::default()))],
+        "
+        _|    |S  >  _|    |
+         |    |   >   |    |
+         |    |   >   | .. |
+         |    |   >   |..  |
+        ",
+    )
+}
+#[cfg(test)]
+#[test]
+fn test_apply_hard_drop_Z() -> Result<(), Penalty> {
+    test_player_action_leads_to_board(
+        vec![PlayerActionsT::HardDrop(Box::new(HardDropT::default()))],
+        "
+        _|    |Z  >  _|    |
+         |    |   >   |    |
+         |    |   >   |..  |
+         |    |   >   | .. |
         ",
     )
 }
