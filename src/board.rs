@@ -76,8 +76,8 @@ impl Mino {
             }
             MinoType::I => match *orientation {
                 Orientation::Left | Orientation::Right => 0,
-                Orientation::Down => 2,
-                Orientation::Up => 1,
+                Orientation::Down => 1,
+                Orientation::Up => 2,
             },
             MinoType::O => match *orientation {
                 Orientation::Up | Orientation::Right => 1,
@@ -91,6 +91,9 @@ impl Mino {
     }
     fn squares_left_of_pivot(&self) -> i8 {
         Mino::squares_right_of_pivot_(&self.mino_type, &self.orientation.rotate180())
+    }
+    fn squares_below_pivot(&self) -> i8 {
+        Mino::squares_right_of_pivot_(&self.mino_type, &self.orientation.rotate_ccw())
     }
 }
 
@@ -869,6 +872,24 @@ fn test_apply_hard_drop_Z() -> Result<(), Penalty> {
          |    |   >   | .. |
         ",
     )
+}
+
+#[cfg(test)]
+#[test]
+fn test_squares_below_pivot() {
+    let mut mino = Mino {
+        mino_type: MinoType::I,
+        orientation: Orientation::Right,
+        pivot_x: 0,
+        pivot_y: 0,
+    };
+    assert_eq!(mino.squares_below_pivot(), 2);
+    mino.orientation = Orientation::Left;
+    assert_eq!(mino.squares_below_pivot(), 1);
+    mino.orientation = Orientation::Up;
+    assert_eq!(mino.squares_below_pivot(), 0);
+    mino.orientation = Orientation::Down;
+    assert_eq!(mino.squares_below_pivot(), 0);
 }
 
 #[cfg(test)]
