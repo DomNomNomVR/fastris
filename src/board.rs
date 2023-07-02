@@ -157,30 +157,24 @@ fn mask_from_mino(m: &Mino, board_width: i8) -> Result<MinoMask, Penalty> {
                 ],
                 bottom_row: m.pivot_y - 1,
             }),
-            Orientation::Right => {
-                let single_bit = 1u16 << (shift_to_pivot);
-                Ok(MinoMask {
-                    covered: [
-                        0b1 << shift_to_pivot,
-                        0b11 << (shift_to_pivot - 1),
-                        0b1 << shift_to_pivot,
-                        0,
-                    ],
-                    bottom_row: (m.pivot_y - 1),
-                })
-            }
-            Orientation::Left => {
-                let single_bit = 1u16 << (shift_to_pivot);
-                Ok(MinoMask {
-                    covered: [
-                        0b01 << shift_to_pivot,
-                        0b11 << shift_to_pivot,
-                        0b01 << shift_to_pivot,
-                        0,
-                    ],
-                    bottom_row: (m.pivot_y - 1),
-                })
-            }
+            Orientation::Right => Ok(MinoMask {
+                covered: [
+                    0b1 << shift_to_pivot,
+                    0b11 << (shift_to_pivot - 1),
+                    0b1 << shift_to_pivot,
+                    0,
+                ],
+                bottom_row: (m.pivot_y - 1),
+            }),
+            Orientation::Left => Ok(MinoMask {
+                covered: [
+                    0b01 << shift_to_pivot,
+                    0b11 << shift_to_pivot,
+                    0b01 << shift_to_pivot,
+                    0,
+                ],
+                bottom_row: (m.pivot_y - 1),
+            }),
         },
         MinoType::L => match m.orientation {
             Orientation::Up => Ok(MinoMask {
@@ -201,30 +195,24 @@ fn mask_from_mino(m: &Mino, board_width: i8) -> Result<MinoMask, Penalty> {
                 ],
                 bottom_row: m.pivot_y - 1,
             }),
-            Orientation::Right => {
-                let single_bit = 1u16 << (shift_to_pivot);
-                Ok(MinoMask {
-                    covered: [
-                        0b11 << (shift_to_pivot - 1),
-                        0b10 << (shift_to_pivot - 1),
-                        0b10 << (shift_to_pivot - 1),
-                        0,
-                    ],
-                    bottom_row: (m.pivot_y - 1),
-                })
-            }
-            Orientation::Left => {
-                let single_bit = 1u16 << (shift_to_pivot);
-                Ok(MinoMask {
-                    covered: [
-                        0b01 << shift_to_pivot,
-                        0b01 << shift_to_pivot,
-                        0b11 << shift_to_pivot,
-                        0,
-                    ],
-                    bottom_row: (m.pivot_y - 1),
-                })
-            }
+            Orientation::Right => Ok(MinoMask {
+                covered: [
+                    0b11 << (shift_to_pivot - 1),
+                    0b10 << (shift_to_pivot - 1),
+                    0b10 << (shift_to_pivot - 1),
+                    0,
+                ],
+                bottom_row: (m.pivot_y - 1),
+            }),
+            Orientation::Left => Ok(MinoMask {
+                covered: [
+                    0b01 << shift_to_pivot,
+                    0b01 << shift_to_pivot,
+                    0b11 << shift_to_pivot,
+                    0,
+                ],
+                bottom_row: (m.pivot_y - 1),
+            }),
         },
         MinoType::J => match m.orientation {
             Orientation::Up => Ok(MinoMask {
@@ -245,30 +233,24 @@ fn mask_from_mino(m: &Mino, board_width: i8) -> Result<MinoMask, Penalty> {
                 ],
                 bottom_row: m.pivot_y - 1,
             }),
-            Orientation::Right => {
-                let single_bit = 1u16 << (shift_to_pivot);
-                Ok(MinoMask {
-                    covered: [
-                        0b10 << (shift_to_pivot - 1),
-                        0b10 << (shift_to_pivot - 1),
-                        0b11 << (shift_to_pivot - 1),
-                        0,
-                    ],
-                    bottom_row: (m.pivot_y - 1),
-                })
-            }
-            Orientation::Left => {
-                let single_bit = 1u16 << (shift_to_pivot);
-                Ok(MinoMask {
-                    covered: [
-                        0b11 << shift_to_pivot,
-                        0b01 << shift_to_pivot,
-                        0b01 << shift_to_pivot,
-                        0,
-                    ],
-                    bottom_row: (m.pivot_y - 1),
-                })
-            }
+            Orientation::Right => Ok(MinoMask {
+                covered: [
+                    0b10 << (shift_to_pivot - 1),
+                    0b10 << (shift_to_pivot - 1),
+                    0b11 << (shift_to_pivot - 1),
+                    0,
+                ],
+                bottom_row: (m.pivot_y - 1),
+            }),
+            Orientation::Left => Ok(MinoMask {
+                covered: [
+                    0b11 << shift_to_pivot,
+                    0b01 << shift_to_pivot,
+                    0b01 << shift_to_pivot,
+                    0,
+                ],
+                bottom_row: (m.pivot_y - 1),
+            }),
         },
         MinoType::S => match m.orientation {
             Orientation::Up => Ok(MinoMask {
@@ -289,30 +271,24 @@ fn mask_from_mino(m: &Mino, board_width: i8) -> Result<MinoMask, Penalty> {
                 ],
                 bottom_row: m.pivot_y - 1,
             }),
-            Orientation::Right => {
-                let single_bit = 1u16 << (shift_to_pivot);
-                Ok(MinoMask {
-                    covered: [
-                        0b01 << (shift_to_pivot - 1),
-                        0b11 << (shift_to_pivot - 1),
-                        0b10 << (shift_to_pivot - 1),
-                        0,
-                    ],
-                    bottom_row: (m.pivot_y - 1),
-                })
-            }
-            Orientation::Left => {
-                let single_bit = 1u16 << (shift_to_pivot);
-                Ok(MinoMask {
-                    covered: [
-                        0b01 << shift_to_pivot,
-                        0b11 << shift_to_pivot,
-                        0b10 << shift_to_pivot,
-                        0,
-                    ],
-                    bottom_row: (m.pivot_y - 1),
-                })
-            }
+            Orientation::Right => Ok(MinoMask {
+                covered: [
+                    0b01 << (shift_to_pivot - 1),
+                    0b11 << (shift_to_pivot - 1),
+                    0b10 << (shift_to_pivot - 1),
+                    0,
+                ],
+                bottom_row: (m.pivot_y - 1),
+            }),
+            Orientation::Left => Ok(MinoMask {
+                covered: [
+                    0b01 << shift_to_pivot,
+                    0b11 << shift_to_pivot,
+                    0b10 << shift_to_pivot,
+                    0,
+                ],
+                bottom_row: (m.pivot_y - 1),
+            }),
         },
         MinoType::Z => match m.orientation {
             Orientation::Up => Ok(MinoMask {
@@ -333,30 +309,24 @@ fn mask_from_mino(m: &Mino, board_width: i8) -> Result<MinoMask, Penalty> {
                 ],
                 bottom_row: m.pivot_y - 1,
             }),
-            Orientation::Right => {
-                let single_bit = 1u16 << (shift_to_pivot);
-                Ok(MinoMask {
-                    covered: [
-                        0b10 << (shift_to_pivot - 1),
-                        0b11 << (shift_to_pivot - 1),
-                        0b01 << (shift_to_pivot - 1),
-                        0,
-                    ],
-                    bottom_row: (m.pivot_y - 1),
-                })
-            }
-            Orientation::Left => {
-                let single_bit = 1u16 << (shift_to_pivot);
-                Ok(MinoMask {
-                    covered: [
-                        0b10 << shift_to_pivot,
-                        0b11 << shift_to_pivot,
-                        0b01 << shift_to_pivot,
-                        0,
-                    ],
-                    bottom_row: (m.pivot_y - 1),
-                })
-            }
+            Orientation::Right => Ok(MinoMask {
+                covered: [
+                    0b10 << (shift_to_pivot - 1),
+                    0b11 << (shift_to_pivot - 1),
+                    0b01 << (shift_to_pivot - 1),
+                    0,
+                ],
+                bottom_row: (m.pivot_y - 1),
+            }),
+            Orientation::Left => Ok(MinoMask {
+                covered: [
+                    0b10 << shift_to_pivot,
+                    0b11 << shift_to_pivot,
+                    0b01 << shift_to_pivot,
+                    0,
+                ],
+                bottom_row: (m.pivot_y - 1),
+            }),
         },
         MinoType::O => match m.orientation {
             Orientation::Up => Ok(MinoMask {
@@ -377,30 +347,24 @@ fn mask_from_mino(m: &Mino, board_width: i8) -> Result<MinoMask, Penalty> {
                 ],
                 bottom_row: m.pivot_y - 1,
             }),
-            Orientation::Right => {
-                let single_bit = 1u16 << (shift_to_pivot);
-                Ok(MinoMask {
-                    covered: [
-                        0b11 << (shift_to_pivot - 0),
-                        0b11 << (shift_to_pivot - 0),
-                        0,
-                        0,
-                    ],
-                    bottom_row: m.pivot_y - 1,
-                })
-            }
-            Orientation::Left => {
-                let single_bit = 1u16 << (shift_to_pivot);
-                Ok(MinoMask {
-                    covered: [
-                        0b11 << (shift_to_pivot - 1),
-                        0b11 << (shift_to_pivot - 1),
-                        0,
-                        0,
-                    ],
-                    bottom_row: m.pivot_y - 0,
-                })
-            }
+            Orientation::Right => Ok(MinoMask {
+                covered: [
+                    0b11 << (shift_to_pivot - 0),
+                    0b11 << (shift_to_pivot - 0),
+                    0,
+                    0,
+                ],
+                bottom_row: m.pivot_y - 1,
+            }),
+            Orientation::Left => Ok(MinoMask {
+                covered: [
+                    0b11 << (shift_to_pivot - 1),
+                    0b11 << (shift_to_pivot - 1),
+                    0,
+                    0,
+                ],
+                bottom_row: m.pivot_y - 0,
+            }),
         },
 
         _ => Err(Penalty::new("unsopported mino type")),
@@ -559,7 +523,7 @@ impl std::fmt::Display for Board {
     }
 }
 
-fn is_valid(mino: &Mino, kick: &Kick, b: &Board) {}
+// fn is_valid(mino: &Mino, kick: &Kick, b: &Board) {}
 
 // A little thing that gives feedback that an action was bad in some way.
 // Some moves are be valid but would still result in a penalty as they result in no board state change.
@@ -580,11 +544,6 @@ impl Penalty {
 }
 
 fn apply_action(a: &PlayerAction, b: &mut Board) -> Result<u8, Penalty> {
-    let penalty_for_empty = Some(Penalty {
-        reason: String::from("action was empty"),
-        significance: 10,
-    });
-
     try_set_active_mino(b);
     match a.action_type() {
         PlayerActions::RotateCW => match a.action_as_rotate_cw() {
@@ -722,7 +681,7 @@ fn apply_horizontal(a: &Horizontal, board: &mut Board) -> Result<u8, Penalty> {
         // TODO: optimizaiton: achieve things via just bit shifting the mask.
         for x in min(x0, x1)..=max(x0, x1) {
             mino.pivot_x = x;
-            let mut mask = mask_from_mino(mino, board.width)?;
+            let mask = mask_from_mino(mino, board.width)?;
             for i in 0..4usize {
                 if board.rows[mask.bottom_row + i] & mask.covered[i] != 0 {
                     mino.pivot_x = x0; // revert state changes
@@ -809,7 +768,7 @@ fn test_apply_hard_drop() -> Result<(), Penalty> {
 }
 #[cfg(test)]
 #[test]
-fn test_apply_hard_drop_TI() -> Result<(), Penalty> {
+fn test_apply_hard_drop_ti() -> Result<(), Penalty> {
     test_player_action_leads_to_board(
         vec![
             PlayerActionsT::HardDrop(Box::new(HardDropT::default())),
@@ -825,7 +784,7 @@ fn test_apply_hard_drop_TI() -> Result<(), Penalty> {
 }
 #[cfg(test)]
 #[test]
-fn test_apply_hard_drop_TO() -> Result<(), Penalty> {
+fn test_apply_hard_drop_to() -> Result<(), Penalty> {
     test_player_action_leads_to_board(
         vec![
             PlayerActionsT::HardDrop(Box::new(HardDropT::default())),
@@ -842,7 +801,7 @@ fn test_apply_hard_drop_TO() -> Result<(), Penalty> {
 
 #[cfg(test)]
 #[test]
-fn test_apply_hard_drop_J() -> Result<(), Penalty> {
+fn test_apply_hard_drop_j() -> Result<(), Penalty> {
     test_player_action_leads_to_board(
         vec![PlayerActionsT::HardDrop(Box::new(HardDropT::default()))],
         "
@@ -856,7 +815,7 @@ fn test_apply_hard_drop_J() -> Result<(), Penalty> {
 
 #[cfg(test)]
 #[test]
-fn test_apply_hard_drop_L() -> Result<(), Penalty> {
+fn test_apply_hard_drop_l() -> Result<(), Penalty> {
     test_player_action_leads_to_board(
         vec![PlayerActionsT::HardDrop(Box::new(HardDropT::default()))],
         "
@@ -869,7 +828,7 @@ fn test_apply_hard_drop_L() -> Result<(), Penalty> {
 }
 #[cfg(test)]
 #[test]
-fn test_apply_hard_drop_S() -> Result<(), Penalty> {
+fn test_apply_hard_drop_s() -> Result<(), Penalty> {
     test_player_action_leads_to_board(
         vec![PlayerActionsT::HardDrop(Box::new(HardDropT::default()))],
         "
@@ -882,7 +841,7 @@ fn test_apply_hard_drop_S() -> Result<(), Penalty> {
 }
 #[cfg(test)]
 #[test]
-fn test_apply_hard_drop_Z() -> Result<(), Penalty> {
+fn test_apply_hard_drop_z() -> Result<(), Penalty> {
     test_player_action_leads_to_board(
         vec![PlayerActionsT::HardDrop(Box::new(HardDropT::default()))],
         "
