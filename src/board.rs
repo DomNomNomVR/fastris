@@ -698,6 +698,7 @@ fn apply_horizontal(a: &Horizontal, board: &mut Board) -> Result<u8, Penalty> {
 }
 
 fn split_two_board_ascii_art(two_board_ascii_art: &str) -> (String, String) {
+    assert!(two_board_ascii_art.contains(">")); // delimiter between boards
     let tmp: (Vec<&str>, Vec<&str>) = two_board_ascii_art
         .split("\n")
         .map(|line| line.split(">").collect::<Vec<&str>>())
@@ -707,13 +708,11 @@ fn split_two_board_ascii_art(two_board_ascii_art: &str) -> (String, String) {
     (tmp.0.join("\n"), tmp.1.join("\n"))
 }
 
-fn test_player_action_leads_to_board(
+fn run_player_actions_on_board(
     actions: Vec<PlayerActionsT>,
-    two_board_ascii_art: &str,
-) -> Result<(), Penalty> {
-    let (board_start_string, board_want_string) = split_two_board_ascii_art(two_board_ascii_art);
-    let mut board = Board::from_ascii_art(&board_start_string);
-    let want = Board::from_ascii_art(&board_want_string);
+    board_ascii_art: &str,
+) -> Result<Board, Penalty> {
+    let mut board = Board::from_ascii_art(board_ascii_art);
     let mut bob = FlatBufferBuilder::with_capacity(1024);
     for action in actions {
         bob.reset();
@@ -725,8 +724,18 @@ fn test_player_action_leads_to_board(
             Ok(_) => (),
             Err(x) => return Err(x),
         }
-        // assert!(apply_action(&action2, &mut board).is_ok());
     }
+    Ok(board)
+}
+
+fn test_player_action_leads_to_board(
+    actions: Vec<PlayerActionsT>,
+    two_board_ascii_art: &str,
+) -> Result<(), Penalty> {
+    let (board_start_string, board_want_string) = split_two_board_ascii_art(two_board_ascii_art);
+    let want = Board::from_ascii_art(&board_want_string);
+
+    let board = run_player_actions_on_board(actions, board_start_string.as_str())?;
     if board != want {
         println!("got:\n{}", board);
         println!("want:\n{}", want);
@@ -787,6 +796,30 @@ fn test_apply_horizontal() -> Result<(), Penalty> {
      |    |   >   | ...| 
     ",
     )
+}
+#[cfg(test)]
+#[test]
+fn test_apply_horizontal_penalty() {
+    match run_player_actions_on_board(
+        vec![horizontal(-1)],
+        "
+        _|    |T
+         |    |
+         |    |",
+    ) {
+        Ok(_) => panic!("not supposed to work"),
+        Err(penalty) => assert!(penalty.reason.contains("past left edge")),
+    }
+    match run_player_actions_on_board(
+        vec![horizontal(2)],
+        "
+        _|    |T
+         |    |
+         |    |",
+    ) {
+        Ok(_) => panic!("not supposed to work"),
+        Err(penalty) => assert!(penalty.reason.contains("past right edge")),
+    }
 }
 
 #[cfg(test)]
