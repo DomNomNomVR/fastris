@@ -753,14 +753,34 @@ fn test_oritentation_rotation() {
     }
 }
 
+// shorthands for creating Player Actions.
+fn rotate_cw() -> PlayerActionsT {
+    PlayerActionsT::RotateCW(Box::new(RotateCWT {}))
+}
+fn rotate_ccw() -> PlayerActionsT {
+    PlayerActionsT::RotateCCW(Box::new(RotateCCWT {}))
+}
+fn rotate180() -> PlayerActionsT {
+    PlayerActionsT::Rotate180(Box::new(Rotate180T {}))
+}
+fn hold() -> PlayerActionsT {
+    PlayerActionsT::Hold(Box::new(HoldT {}))
+}
+fn hard_drop() -> PlayerActionsT {
+    PlayerActionsT::HardDrop(Box::new(HardDropT {}))
+}
+fn soft_drop(repeats: u16) -> PlayerActionsT {
+    PlayerActionsT::SoftDrop(Box::new(SoftDropT { repeats: repeats }))
+}
+fn horizontal(right: i8) -> PlayerActionsT {
+    PlayerActionsT::Horizontal(Box::new(HorizontalT { right: right }))
+}
+
 #[cfg(test)]
 #[test]
 fn test_apply_horizontal() -> Result<(), Penalty> {
     test_player_action_leads_to_board(
-        vec![
-            PlayerActionsT::Horizontal(Box::new(HorizontalT { right: 1 })),
-            PlayerActionsT::HardDrop(Box::new(HardDropT {})),
-        ],
+        vec![horizontal(1), hard_drop()],
         "
     _|    |T  >  _|    | 
      |    |   >   |  . | 
@@ -773,7 +793,7 @@ fn test_apply_horizontal() -> Result<(), Penalty> {
 #[test]
 fn test_apply_hard_drop() -> Result<(), Penalty> {
     test_player_action_leads_to_board(
-        vec![PlayerActionsT::HardDrop(Box::new(HardDropT::default()))],
+        vec![hard_drop()],
         "
     _|    |T  >  _|    |I 
      |    |I  >   |    | 
@@ -786,10 +806,7 @@ fn test_apply_hard_drop() -> Result<(), Penalty> {
 #[test]
 fn test_apply_hard_drop_ti() -> Result<(), Penalty> {
     test_player_action_leads_to_board(
-        vec![
-            PlayerActionsT::HardDrop(Box::new(HardDropT::default())),
-            PlayerActionsT::HardDrop(Box::new(HardDropT::default())),
-        ],
+        vec![hard_drop(), hard_drop()],
         "
         _|    |T  >  _|    |
          |    |I  >   |....|
@@ -802,10 +819,7 @@ fn test_apply_hard_drop_ti() -> Result<(), Penalty> {
 #[test]
 fn test_apply_hard_drop_to() -> Result<(), Penalty> {
     test_player_action_leads_to_board(
-        vec![
-            PlayerActionsT::HardDrop(Box::new(HardDropT::default())),
-            PlayerActionsT::HardDrop(Box::new(HardDropT::default())),
-        ],
+        vec![hard_drop(), hard_drop()],
         "
         _|    |T  >  _| .. |
          |    |O  >   | .. |
@@ -819,7 +833,7 @@ fn test_apply_hard_drop_to() -> Result<(), Penalty> {
 #[test]
 fn test_apply_hard_drop_j() -> Result<(), Penalty> {
     test_player_action_leads_to_board(
-        vec![PlayerActionsT::HardDrop(Box::new(HardDropT::default()))],
+        vec![hard_drop()],
         "
         _|    |J  >  _|    |
          |    |   >   |    |
@@ -833,7 +847,7 @@ fn test_apply_hard_drop_j() -> Result<(), Penalty> {
 #[test]
 fn test_apply_hard_drop_l() -> Result<(), Penalty> {
     test_player_action_leads_to_board(
-        vec![PlayerActionsT::HardDrop(Box::new(HardDropT::default()))],
+        vec![hard_drop()],
         "
         _|    |L  >  _|    |
          |    |   >   |    |
@@ -846,7 +860,7 @@ fn test_apply_hard_drop_l() -> Result<(), Penalty> {
 #[test]
 fn test_apply_hard_drop_s() -> Result<(), Penalty> {
     test_player_action_leads_to_board(
-        vec![PlayerActionsT::HardDrop(Box::new(HardDropT::default()))],
+        vec![hard_drop()],
         "
         _|    |S  >  _|    |
          |    |   >   |    |
@@ -859,7 +873,7 @@ fn test_apply_hard_drop_s() -> Result<(), Penalty> {
 #[test]
 fn test_apply_hard_drop_z() -> Result<(), Penalty> {
     test_player_action_leads_to_board(
-        vec![PlayerActionsT::HardDrop(Box::new(HardDropT::default()))],
+        vec![hard_drop()],
         "
         _|    |Z  >  _|    |
          |    |   >   |    |
