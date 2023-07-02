@@ -29,13 +29,69 @@ enum Orientation {
     Left,  // L
 }
 
+impl Orientation {
+    fn rotate180(&self) -> Self {
+        match self {
+            Orientation::Up => Orientation::Down,
+            Orientation::Right => Orientation::Left,
+            Orientation::Down => Orientation::Up,
+            Orientation::Left => Orientation::Right,
+        }
+    }
+    fn rotate_cw(&self) -> Self {
+        match self {
+            Orientation::Up => Orientation::Right,
+            Orientation::Right => Orientation::Down,
+            Orientation::Down => Orientation::Left,
+            Orientation::Left => Orientation::Up,
+        }
+    }
+    fn rotate_ccw(&self) -> Self {
+        match self {
+            Orientation::Right => Orientation::Up,
+            Orientation::Down => Orientation::Right,
+            Orientation::Left => Orientation::Down,
+            Orientation::Up => Orientation::Left,
+        }
+    }
+}
+
 #[derive(PartialEq, Eq, Debug)]
 struct Mino {
     mino_type: MinoType,
     orientation: Orientation,
-    pivot_x: usize,
+    pivot_x: i8,
     pivot_y: usize,
     // mask: [u16],
+}
+
+impl Mino {
+    fn squares_right_of_pivot_(mino_type: &MinoType, orientation: &Orientation) -> i8 {
+        match *mino_type {
+            MinoType::T | MinoType::L | MinoType::J | MinoType::S | MinoType::Z => {
+                match *orientation {
+                    Orientation::Down | Orientation::Right | Orientation::Up => 1,
+                    Orientation::Left => 0,
+                }
+            }
+            MinoType::I => match *orientation {
+                Orientation::Left | Orientation::Right => 0,
+                Orientation::Down => 2,
+                Orientation::Up => 1,
+            },
+            MinoType::O => match *orientation {
+                Orientation::Up | Orientation::Right => 1,
+                Orientation::Down | Orientation::Left => 0,
+            },
+            _ => 0,
+        }
+    }
+    fn squares_right_of_pivot(&self) -> i8 {
+        Mino::squares_right_of_pivot_(&self.mino_type, &self.orientation)
+    }
+    fn squares_left_of_pivot(&self) -> i8 {
+        Mino::squares_right_of_pivot_(&self.mino_type, &self.orientation.rotate180())
+    }
 }
 
 struct MinoMask {
@@ -344,25 +400,16 @@ fn mask_from_mino(m: &Mino, b: &Board) -> Result<MinoMask, Penalty> {
             }
         },
 
-        _ => Err(Penalty::new("dom sucks")),
+        _ => Err(Penalty::new("unsopported mino type")),
     }
 }
-
-// impl Mino {
-//     fn new(mino_type: MinoType) -> Mino {
-//         Mino {
-//             mino_type: mino_type,
-
-//         }
-//     }
-// }
 
 #[derive(PartialEq, Eq, Debug)]
 struct Board {
     // we assume this is big enough
     // each row is represented as an int bitmask
     rows: [u16; 1024],
-    width: usize,
+    width: i8,
     active_mino: Option<Mino>,
     hold: Option<MinoType>,
     upcoming_minos: VecDeque<MinoType>,
@@ -422,13 +469,13 @@ impl Board {
             // parse the row of blocks.
             let row = segments[1].chars().collect::<Vec<_>>();
             if board.width == 0 {
-                board.width = row.len();
+                board.width = row.len() as i8;
             } else {
-                assert_eq!(board.width, row.len()); // all rows must be same length
+                assert_eq!(board.width, row.len() as i8); // all rows must be same length
             }
             let mut row_int: u16 = 0;
             for x in 0..board.width {
-                if row[x] != ' ' {
+                if row[x as usize] != ' ' {
                     row_int |= 1 << board.width - 1 - x;
                 }
             }
@@ -646,6 +693,25 @@ fn apply_soft_drop(a: &SoftDrop, board: &mut Board) -> Result<u8, Penalty> {
     Ok(0)
 }
 fn apply_horizontal(a: &Horizontal, board: &mut Board) -> Result<u8, Penalty> {
+    if board.active_mino.is_none() {
+        return Err(Penalty::new(
+            "Trying to move horizontally without an active piece",
+        ));
+    }
+    let mino = board.active_mino.as_mut().unwrap();
+    let new_pivot_x: i8 = mino.pivot_x + a.right();
+    // Check whether we would cross boundaries.
+    if a.right() < 0 {
+        if new_pivot_x - mino.squares_left_of_pivot() < 0 {
+            return Err(Penalty::new("trying to go past left edge"));
+        }
+    } else {
+        if new_pivot_x + mino.squares_right_of_pivot() >= board.width {
+            return Err(Penalty::new("trying to go past right edge"));
+        }
+    }
+
+    // check intersections with boundaries
     Ok(0)
 }
 
@@ -686,6 +752,23 @@ fn test_player_action_leads_to_board(
     }
     // assert_eq!(board, want);
     Ok(())
+}
+
+#[cfg(test)]
+#[test]
+fn test_oritentation_rotation() {
+    for o in [
+        Orientation::Up,
+        Orientation::Down,
+        Orientation::Left,
+        Orientation::Right,
+    ] {
+        assert_eq!(o, o.rotate_cw().rotate_ccw());
+        assert_ne!(o, o.rotate_cw());
+        assert_eq!(o, o.rotate180().rotate180());
+        assert_eq!(o.rotate_cw().rotate_cw(), o.rotate180());
+        assert_eq!(o.rotate_ccw().rotate_ccw(), o.rotate180());
+    }
 }
 
 #[cfg(test)]
