@@ -571,7 +571,7 @@ impl Penalty {
 }
 
 fn apply_action(a: &PlayerAction, b: &mut Board) -> Result<u8, Penalty> {
-    try_set_active_mino(b);
+    try_set_active_mino(b)?; // this also handles top-out.
     match a.action_type() {
         PlayerActions::RotateCW => match a.action_as_rotate_cw() {
             None => Err(Penalty::new("RotateCW was empty")),
@@ -617,16 +617,30 @@ fn spawn_mino(mino_type: MinoType, board: &Board) -> Mino {
     };
 }
 
-fn try_set_active_mino(board: &mut Board) {
+fn try_set_active_mino(board: &mut Board) -> Result<(), Penalty> {
     if board.active_mino.is_none() {
         let maybe_mino_type = board.upcoming_minos.pop_front();
         match maybe_mino_type {
             None => (),
             Some(mino_type) => {
-                board.active_mino = Some(spawn_mino(mino_type, board));
+                let mino = spawn_mino(mino_type, board);
+                if board.rows[board.spawn_height] != 0 {
+                    let mask = mask_from_mino(&mino, board.width)?;
+                    if test_intersection(&mask, &board.rows) {
+                        board.active_mino = Some(mino);
+                        return Err(Penalty {
+                            reason: "TOP-OUT!".to_string(),
+                            significance: 100,
+                        });
+                    }
+                }
+                // note: we don't do this earlier as we don't want to move the mino value out
+                // before we use it to construct the mask potentially.
+                board.active_mino = Some(mino);
             }
         }
     }
+    return Ok(());
 }
 
 // const FOO: [(i8, i8); ] = 3u8;
@@ -1013,7 +1027,22 @@ fn test_i_multi_clear() -> Result<(), Penalty> {
     )
 }
 
-fn test_spawn_blocked
+#[cfg(test)]
+#[test]
+fn test_spawn_blocked() {
+    match run_player_actions_on_board(
+        vec![hard_drop()],
+        "
+        _|   .|I",
+    ) {
+        Ok(_) => panic!("not supposed to work"),
+        Err(penalty) => assert!(
+            penalty.reason.contains("TOP-OUT!"),
+            "wrong error string: {}",
+            penalty.reason
+        ),
+    }
+}
 
 #[cfg(test)]
 #[test]
