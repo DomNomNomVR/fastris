@@ -756,6 +756,9 @@ fn apply_hold(a: &Hold, board: &mut Board) -> Result<u8, Penalty> {
 }
 fn test_intersection(mask: &MinoMask, board_rows: &[u16; BOARD_HEIGHT]) -> bool {
     let mut acc = 0;
+    if board_rows[mask.bottom_row] == 0 {
+        return false; // nothing can be at this row or above.
+    }
     for i in 0..4usize {
         acc |= board_rows[mask.bottom_row + i] & mask.covered[i];
     }
@@ -821,8 +824,24 @@ fn apply_soft_drop(a: &SoftDrop, board: &mut Board) -> Result<u8, Penalty> {
     if board.active_mino.is_none() {
         return Err(Penalty::new("Trying to soft drop without an active piece"));
     }
-    let mino = board.active_mino.as_ref().unwrap();
-    for i in 0..a.repeats() {}
+    let mino = board.active_mino.as_mut().unwrap();
+    let mut mask = mask_from_mino(mino, board.width)?;
+    let repeats = a.repeats() as usize;
+    if repeats as usize > mask.bottom_row {
+        return Err(Penalty::new("trying to soft drop below floor"));
+    }
+    let mut new_pivot_y = mino.pivot_y - repeats;
+    for row_i in (new_pivot_y..mino.pivot_y).rev() {
+        mask.bottom_row = row_i;
+        if test_intersection(&mask, &board.rows) {
+            // return Err(Pentalty::new("Soft drop collided with exiting piece"))
+            // Let's be forgiving as the board could've been bumped up without their knowledge.
+            let new_bottom = row_i + 1;
+            new_pivot_y = new_bottom + mino.squares_below_pivot() as usize;
+            break;
+        }
+    }
+    mino.pivot_y = new_pivot_y;
     Ok(0)
 }
 fn apply_horizontal(a: &Horizontal, board: &mut Board) -> Result<u8, Penalty> {
@@ -970,6 +989,30 @@ fn horizontal(right: i8) -> PlayerActionsT {
     PlayerActionsT::Horizontal(Box::new(HorizontalT { right: right }))
 }
 
+#[cfg(test)]
+#[test]
+fn test_tspin_triple() -> Result<(), Penalty> {
+    test_player_action_leads_to_board_and_lines_sent(
+        vec![
+            rotate_cw(),
+            horizontal(-1),
+            soft_drop(2),
+            rotate_ccw(),
+            rotate_ccw(),
+            hard_drop(),
+        ],
+        "
+    _|    |T  >  _|    | 
+     |    |   >   |    | 
+     |  ..|   >   |    | 
+     |   .|   >   |    | 
+     |.. .|   >   |    | 
+     |.  .|   >   |  ..| 
+     |.. .|   >   |   .| 
+    ",
+        2, // this should be more in the future
+    )
+}
 #[cfg(test)]
 #[test]
 fn test_skim_t() -> Result<(), Penalty> {
