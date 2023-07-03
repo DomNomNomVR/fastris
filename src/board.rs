@@ -473,12 +473,14 @@ impl std::fmt::Display for Board {
                     Some(m) => m.pivot_y + m.squares_above_pivot() as usize,
                 },
             ),
-            self.rows.iter().position(|row| *row == 0).unwrap() - 1,
+            max(2, self.rows.iter().position(|row| *row == 0).unwrap() - 1),
         );
         let hold_piece_y = if self.spawn_height > 4 {
             self.spawn_height - 2usize
-        } else {
+        } else if self.spawn_height > 0 {
             self.spawn_height - 1usize
+        } else {
+            2usize
         };
 
         let mask_maybe: Option<MinoMask> = match &self.active_mino {
@@ -977,6 +979,16 @@ fn test_skim_t() -> Result<(), Penalty> {
     _|   .|T  >  _|    | 
      |   .|   >   | . .| 
      |  ..|   >   |  ..| 
+    ",
+    )
+}
+#[cfg(test)]
+#[test]
+fn test_clutch() -> Result<(), Penalty> {
+    test_player_action_leads_to_board(
+        vec![hard_drop()],
+        "
+    _|.    .|I  >  _|      | 
     ",
     )
 }
