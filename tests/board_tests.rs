@@ -152,7 +152,13 @@ mod tests {
     #[test]
     fn test_zspin_double() -> Result<(), Penalty> {
         test_player_action_leads_to_board_and_lines_sent(
-            vec![rotate_ccw(), soft_drop(2), rotate_ccw(), hard_drop()],
+            vec![
+                rotate_ccw(),
+                horizontal(1),
+                soft_drop(2),
+                rotate_ccw(),
+                hard_drop(),
+            ],
             "
     _|    |Z  >  _|    | 
      |    |   >   |    | 
