@@ -18,7 +18,7 @@ use flatbuffers::FlatBufferBuilder;
 
 const BOARD_HEIGHT: usize = 1024;
 
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, Hash, Clone)]
 enum Orientation {
     // defined by the way the middle part of the T-piece points.
     Up,    // 0, also spawn
@@ -54,7 +54,7 @@ impl Orientation {
     }
 }
 
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, Hash, Clone)]
 struct Mino {
     mino_type: MinoType,
     orientation: Orientation,
@@ -372,7 +372,7 @@ fn mask_from_mino(m: &Mino, board_width: i8) -> Result<MinoMask, Penalty> {
     }
 }
 
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, Hash, Clone)]
 struct Board {
     // we assume this is big enough
     // each row is represented as an int bitmask
@@ -382,6 +382,14 @@ struct Board {
     hold: Option<MinoType>,
     upcoming_minos: VecDeque<MinoType>,
     spawn_height: usize,
+}
+
+fn get_str_to_mino_type() -> HashMap<&'static str, MinoType> {
+    let mut str_to_mino_type = HashMap::<&str, MinoType>::new();
+    for mino_type in MinoType::ENUM_VALUES {
+        str_to_mino_type.insert(mino_type.variant_name().unwrap(), *mino_type);
+    }
+    str_to_mino_type
 }
 
 impl Board {
@@ -395,6 +403,7 @@ impl Board {
             hold: None,
         }
     }
+
     fn from_ascii_art(art: &str) -> Board {
         let lines = art
             .split("\n")
@@ -409,11 +418,8 @@ impl Board {
             active_mino: None,
             hold: None,
         };
-        let mut str_to_mino_type = HashMap::<&str, MinoType>::new();
-        for mino_type in MinoType::ENUM_VALUES {
-            str_to_mino_type.insert(mino_type.variant_name().unwrap(), *mino_type);
-        }
 
+        let str_to_mino_type = get_str_to_mino_type();
         for (line_i, line) in lines.iter().enumerate() {
             let row_i = lines.len() - 1 - line_i;
             let segments = line.splitn(3, "|").collect::<Vec<&str>>();
@@ -524,14 +530,24 @@ impl std::fmt::Display for Board {
 
             write!(f, "|")?;
             // board rows
-            // TODO: Active Piece
             for x in 0..self.width {
+                let solid = self.rows[y] & 1 << self.width - x - 1 != 0;
                 write!(
                     f,
                     "{}",
-                    match self.rows[y] & 1 << self.width - x - 1 {
-                        0 => paint_mask(x, y),
-                        _ => '.',
+                    match paint_mask(x, y) {
+                        ' ' =>
+                            if solid {
+                                '.'
+                            } else {
+                                ' '
+                            },
+                        solid_mask =>
+                            if solid {
+                                '!'
+                            } else {
+                                solid_mask
+                            },
                     }
                 )?;
             }
@@ -701,6 +717,7 @@ fn apply_rotate<F: Fn(&Orientation) -> Orientation>(
     let mut success = false;
     let old_pivot_x = mino.pivot_x;
     let old_pivot_y = mino.pivot_y;
+    let min_pivot_y = mino.squares_below_pivot();
     for (dx, dy) in get_kicks(&old_orientation, &mino.orientation, &mino.mino_type) {
         // TODO: reduce the amount of tests needed.
         // by maybe knowing whether they could posibly fail,
@@ -713,12 +730,14 @@ fn apply_rotate<F: Fn(&Orientation) -> Orientation>(
             continue;
         }
 
+        // Test for clipping the bottom
+        if old_pivot_y < 5 && old_pivot_y as i8 + dy < min_pivot_y {
+            continue;
+        }
+
         if dy >= 0 {
             mino.pivot_y = old_pivot_y + dy as usize;
         } else {
-            if old_pivot_y < (mino.squares_below_pivot() - dy) as usize {
-                continue;
-            }
             mino.pivot_y = old_pivot_y - ((-dy) as usize);
         }
 
@@ -730,7 +749,10 @@ fn apply_rotate<F: Fn(&Orientation) -> Orientation>(
         success = true;
         break;
     }
-    if !success {}
+    if !success {
+        return Err(Penalty::new("Can not rotate piece this way here"));
+    }
+
     Ok(0)
 }
 fn apply_rotate_cw(a: &RotateCW, board: &mut Board) -> Result<u8, Penalty> {
@@ -819,6 +841,7 @@ fn apply_hard_drop(a: &HardDrop, board: &mut Board) -> Result<u8, Penalty> {
 
     Ok(lines_sent)
 }
+
 fn apply_soft_drop(a: &SoftDrop, board: &mut Board) -> Result<u8, Penalty> {
     // TODO: optimization about traversing many empty rows
     if board.active_mino.is_none() {
@@ -844,6 +867,7 @@ fn apply_soft_drop(a: &SoftDrop, board: &mut Board) -> Result<u8, Penalty> {
     mino.pivot_y = new_pivot_y;
     Ok(0)
 }
+
 fn apply_horizontal(a: &Horizontal, board: &mut Board) -> Result<u8, Penalty> {
     if board.active_mino.is_none() {
         return Err(Penalty::new(
@@ -973,7 +997,7 @@ fn rotate_cw() -> PlayerActionsT {
 fn rotate_ccw() -> PlayerActionsT {
     PlayerActionsT::RotateCCW(Box::new(RotateCCWT {}))
 }
-fn rotate180() -> PlayerActionsT {
+fn rotate_180() -> PlayerActionsT {
     PlayerActionsT::Rotate180(Box::new(Rotate180T {}))
 }
 fn hold() -> PlayerActionsT {
@@ -1013,6 +1037,122 @@ fn test_tspin_triple() -> Result<(), Penalty> {
         2, // this should be more in the future
     )
 }
+
+#[cfg(test)]
+#[test]
+fn test_zspin_double() -> Result<(), Penalty> {
+    test_player_action_leads_to_board_and_lines_sent(
+        vec![rotate_ccw(), soft_drop(2), rotate_ccw(), hard_drop()],
+        "
+    _|    |Z  >  _|    | 
+     |    |   >   |    | 
+     |  ..|   >   |    | 
+     |.  .|   >   |    | 
+    ",
+        1,
+    )
+}
+
+mod perfect_clear_openers {
+    use core::panic;
+    use std::collections::HashSet;
+
+    use super::*;
+
+    fn test_perfect_clear_opener(upcoming_minos: &str) {
+        let board_ascii_art = "
+        _|          |
+         |...     ..|
+         |...    ...|
+         |...   ....|
+         |...    ...|
+        ";
+        let mut start_board = Board::from_ascii_art(board_ascii_art);
+        let str_to_mino_type = get_str_to_mino_type();
+
+        for mino_type_char in upcoming_minos.chars() {
+            let mino_type_string = mino_type_char.to_string();
+            let mino_type_str: &str = &mino_type_string;
+            let mino_type = str_to_mino_type[mino_type_str];
+            start_board.upcoming_minos.push_back(mino_type);
+        }
+
+        // Search for actions that do a perfect clear on the board
+        let mut seen = HashSet::<Board>::new();
+        let start_history: Vec<PlayerActionsT> = vec![];
+        let mut search_queue =
+            VecDeque::<(Board, Vec<PlayerActionsT>)>::from([(start_board, start_history)]);
+        let mut bob = FlatBufferBuilder::with_capacity(BOARD_HEIGHT);
+        while let Some((parent, history)) = search_queue.pop_front() {
+            if seen.contains(&parent) {
+                continue; // never repeat state
+            }
+
+            let potential_actions = [
+                hard_drop(),
+                rotate_ccw(),
+                rotate_cw(),
+                rotate_180(),
+                soft_drop(1),
+                soft_drop(2),
+                soft_drop(3),
+                soft_drop(4),
+                soft_drop(5),
+                horizontal(1),
+                horizontal(-1),
+                horizontal(2),
+                horizontal(-2),
+                horizontal(3),
+                horizontal(-3),
+                horizontal(4),
+                horizontal(-4),
+            ];
+            for action in potential_actions {
+                bob.reset();
+                let packed = PlayerActionT {
+                    action: action.clone(),
+                }
+                .pack(&mut bob);
+                bob.finish(packed, None);
+                let buf = bob.finished_data();
+                let action2 = flatbuffers::root::<PlayerAction>(buf).unwrap();
+                let mut child = parent.clone();
+                let debug1 = format!("{}", parent);
+                let debug2 = format!("{:?}", history);
+                match apply_action(&action2, &mut child) {
+                    Ok(_) => {
+                        if child.rows[0] == 0 {
+                            return; // found perfect clear
+                        }
+                        if child.rows[4] == 0 {
+                            // never hard drop to above 4 high
+                            let mut child_history = history.clone();
+                            child_history.push(action.clone());
+                            search_queue.push_back((child, child_history));
+                        }
+                    }
+                    Err(_) => (),
+                }
+            }
+
+            seen.insert(parent);
+        }
+        panic!("could not find a solution");
+    }
+
+    macro_rules! test_pco {
+        ($name:ident) => {
+            #[allow(non_snake_case)]
+            #[test]
+            fn $name() {
+                test_perfect_clear_opener(stringify!($name));
+            }
+        };
+    }
+
+    test_pco!(IJIT);
+}
+
 #[cfg(test)]
 #[test]
 fn test_skim_t() -> Result<(), Penalty> {
@@ -1080,6 +1220,29 @@ fn test_i_multi_clear() -> Result<(), Penalty> {
     ",
         4, // tetris!
     )
+}
+
+#[cfg(test)]
+#[test]
+fn test_i_rotate_180() {
+    let foo = run_player_actions_on_board(
+        vec![soft_drop(2), rotate_180()],
+        "
+       _|          |I
+        |...     ..| 
+        |...    ...| 
+        |...   ....| 
+        |...    ...| 
+       ",
+    );
+    match foo {
+        Ok(_) => panic!("expected error"),
+        Err(penalty) => assert!(
+            penalty.reason.contains("Can not rotate"),
+            "wrong error string: {}",
+            penalty.reason
+        ),
+    }
 }
 
 #[cfg(test)]
@@ -1172,7 +1335,7 @@ fn test_i_spin_at_top() -> Result<(), Penalty> {
 #[test]
 fn test_flip_t_skim() -> Result<(), Penalty> {
     test_player_action_leads_to_board(
-        vec![rotate180(), hard_drop()],
+        vec![rotate_180(), hard_drop()],
         "
     _|   .|T  >  _|    | 
      |   .|   >   |   .| 
