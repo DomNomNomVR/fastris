@@ -424,7 +424,11 @@ impl Board {
             if hold_maybe.len() == 1 {
                 if hold_maybe == "_" {
                     // spawn height marker
-                    assert_eq!(board.spawn_height, lines.len()); // must have at most one spawn_height marker
+                    assert_eq!(
+                        board.spawn_height,
+                        lines.len(),
+                        "The spawn marker '_' should only appear once."
+                    ); // must have at most one spawn_height marker
                     board.spawn_height = row_i;
                 } else {
                     assert_eq!(board.hold, None); // must have at most 1 hold

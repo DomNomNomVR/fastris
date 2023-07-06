@@ -355,26 +355,20 @@ mod tests {
         }
     }
     #[test]
-    fn test_penalty_i_soft_drop() {
-        match run_player_actions_on_board(
-            vec![rotate_ccw(), horizontal(2), soft_drop(1)],
+    fn test_penalty_i_soft_drop() -> Result<(), Penalty> {
+        test_player_action_leads_to_board_and_lines_sent(
+            vec![rotate_ccw(), horizontal(2), soft_drop(1), hard_drop()],
             "
-       _|          |I
-        |...     ..| 
-        |...    ...| 
-        |...   ....| 
-        |...    ...| 
+        |          |  >  |          |  
+        |          |  >  |      .   |  
+       _|          |I > _|      .   |  
+        |...     ..|  >  |...   . ..|  
+        |...    ...|  >  |...   ....|  
+        |...   ....|  >  |...   ....|  
+        |...    ...|  >  |...    ...|  
        ",
-        ) {
-            Ok((board, _)) => {
-                panic!("expected error but got this board instead: \n{}", board)
-            }
-            Err(penalty) => assert!(
-                penalty.reason.contains("Can not rotate"),
-                "wrong error string: {}",
-                penalty.reason
-            ),
-        }
+            0,
+        )
     }
 
     #[test]
