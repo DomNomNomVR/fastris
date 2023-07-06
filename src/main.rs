@@ -1,18 +1,18 @@
-mod board;
+// pub mod fastris;
 
-// fn foo2(var: &mut i32) {
-//     *var = 2;
-// }
+// // fn foo2(var: &mut i32) {
+// //     *var = 2;
+// // }
 
-// fn foo3(var: &mut i32) {
-//     *var = 3;
-// }
+// // fn foo3(var: &mut i32) {
+// //     *var = 3;
+// // }
 
-// import the generated code
-#[allow(dead_code, unused_imports)]
-#[allow(clippy::all)]
-mod client_generated;
-pub use client_generated::fastris::client::PlayerAction;
+// // import the generated code
+// #[allow(dead_code, unused_imports)]
+// #[allow(clippy::all)]
+// mod client_generated;
+// pub use client_generated::fastris::client::PlayerAction;
 
 fn main() {
     println!("hi");

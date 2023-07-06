@@ -9,17 +9,16 @@ use std::{
 #[allow(dead_code, unused_imports)]
 #[allow(clippy::all)]
 //mod client_generated;
-pub use crate::client_generated::fastris::client::PlayerAction;
 pub use crate::client_generated::fastris::client::*;
 
 // import the flatbuffers runtime library
 extern crate flatbuffers;
 use flatbuffers::FlatBufferBuilder;
 
-const BOARD_HEIGHT: usize = 1024;
+pub const BOARD_HEIGHT: usize = 1024;
 
 #[derive(PartialEq, Eq, Debug, Hash, Clone)]
-enum Orientation {
+pub enum Orientation {
     // defined by the way the middle part of the T-piece points.
     Up,    // 0, also spawn
     Right, // R
@@ -28,7 +27,7 @@ enum Orientation {
 }
 
 impl Orientation {
-    fn rotate_180(&self) -> Self {
+    pub fn rotate_180(&self) -> Self {
         match self {
             Orientation::Up => Orientation::Down,
             Orientation::Right => Orientation::Left,
@@ -36,7 +35,7 @@ impl Orientation {
             Orientation::Left => Orientation::Right,
         }
     }
-    fn rotate_cw(&self) -> Self {
+    pub fn rotate_cw(&self) -> Self {
         match self {
             Orientation::Up => Orientation::Right,
             Orientation::Right => Orientation::Down,
@@ -44,7 +43,7 @@ impl Orientation {
             Orientation::Left => Orientation::Up,
         }
     }
-    fn rotate_ccw(&self) -> Self {
+    pub fn rotate_ccw(&self) -> Self {
         match self {
             Orientation::Right => Orientation::Up,
             Orientation::Down => Orientation::Right,
@@ -55,11 +54,11 @@ impl Orientation {
 }
 
 #[derive(PartialEq, Eq, Debug, Hash, Clone)]
-struct Mino {
-    mino_type: MinoType,
-    orientation: Orientation,
-    pivot_x: i8,
-    pivot_y: usize,
+pub struct Mino {
+    pub mino_type: MinoType,
+    pub orientation: Orientation,
+    pub pivot_x: i8,
+    pub pivot_y: usize,
     // mask: [u16],
 }
 
@@ -84,31 +83,26 @@ impl Mino {
             _ => 0,
         }
     }
-    fn squares_right_of_pivot(&self) -> i8 {
+    pub fn squares_right_of_pivot(&self) -> i8 {
         Mino::squares_right_of_pivot_(&self.mino_type, &self.orientation)
     }
-    fn squares_left_of_pivot(&self) -> i8 {
+    pub fn squares_left_of_pivot(&self) -> i8 {
         Mino::squares_right_of_pivot_(&self.mino_type, &self.orientation.rotate_180())
     }
-    fn squares_below_pivot(&self) -> i8 {
+    pub fn squares_below_pivot(&self) -> i8 {
         Mino::squares_right_of_pivot_(&self.mino_type, &self.orientation.rotate_ccw())
     }
-    fn squares_above_pivot(&self) -> i8 {
+    pub fn squares_above_pivot(&self) -> i8 {
         Mino::squares_right_of_pivot_(&self.mino_type, &self.orientation.rotate_cw())
     }
 }
 
-struct MinoMask {
-    bottom_row: usize,
-    covered: [u16; 4],
+pub struct MinoMask {
+    pub bottom_row: usize,
+    pub covered: [u16; 4],
 }
 
-struct Kick {
-    x: i32,
-    y: i32,
-}
-
-fn mask_from_mino(m: &Mino, board_width: i8) -> Result<MinoMask, Penalty> {
+pub fn mask_from_mino(m: &Mino, board_width: i8) -> Result<MinoMask, Penalty> {
     let shift_to_pivot = board_width - 1 - m.pivot_x;
     // https://tetris.wiki/Super_Rotation_System#How_Guideline_SRS_Really_Works
     // The following match statement is effectively encoding this table:
@@ -373,18 +367,18 @@ fn mask_from_mino(m: &Mino, board_width: i8) -> Result<MinoMask, Penalty> {
 }
 
 #[derive(PartialEq, Eq, Debug, Hash, Clone)]
-struct Board {
+pub struct Board {
     // we assume this is big enough
     // each row is represented as an int bitmask
-    rows: [u16; BOARD_HEIGHT],
-    width: i8,
-    active_mino: Option<Mino>,
-    hold: Option<MinoType>,
-    upcoming_minos: VecDeque<MinoType>,
-    spawn_height: usize,
+    pub rows: [u16; BOARD_HEIGHT],
+    pub width: i8,
+    pub active_mino: Option<Mino>,
+    pub hold: Option<MinoType>,
+    pub upcoming_minos: VecDeque<MinoType>,
+    pub spawn_height: usize,
 }
 
-fn get_str_to_mino_type() -> HashMap<&'static str, MinoType> {
+pub fn get_str_to_mino_type() -> HashMap<&'static str, MinoType> {
     let mut str_to_mino_type = HashMap::<&str, MinoType>::new();
     for mino_type in MinoType::ENUM_VALUES {
         str_to_mino_type.insert(mino_type.variant_name().unwrap(), *mino_type);
@@ -393,7 +387,7 @@ fn get_str_to_mino_type() -> HashMap<&'static str, MinoType> {
 }
 
 impl Board {
-    fn new(upcoming_minos: VecDeque<MinoType>) -> Board {
+    pub fn new(upcoming_minos: VecDeque<MinoType>) -> Board {
         Board {
             rows: [0; BOARD_HEIGHT],
             width: 8,
@@ -404,7 +398,7 @@ impl Board {
         }
     }
 
-    fn from_ascii_art(art: &str) -> Board {
+    pub fn from_ascii_art(art: &str) -> Board {
         let lines = art
             .split("\n")
             .map(|line| line.split("//").next().unwrap())
@@ -479,7 +473,7 @@ impl std::fmt::Display for Board {
                     Some(m) => m.pivot_y + m.squares_above_pivot() as usize,
                 },
             ),
-            max(2, self.rows.iter().position(|row| *row == 0).unwrap() - 1),
+            max(3, self.rows.iter().position(|row| *row == 0).unwrap()) - 1,
         );
         let hold_piece_y = if self.spawn_height > 4 {
             self.spawn_height - 2usize
@@ -574,13 +568,13 @@ impl std::fmt::Display for Board {
 // Some moves are be valid but would still result in a penalty as they result in no board state change.
 // For example, spinning an o-piece.
 #[derive(Debug, PartialEq, Eq)]
-struct Penalty {
-    reason: String,
-    significance: u16, // How bad the player should be punished for this. Units TBD.
+pub struct Penalty {
+    pub reason: String,
+    pub significance: u16, // How bad the player should be punished for this. Units TBD.
 }
 
 impl Penalty {
-    fn new(msg: &str) -> Penalty {
+    pub fn new(msg: &str) -> Penalty {
         Penalty {
             reason: msg.to_string(),
             significance: 10,
@@ -588,7 +582,7 @@ impl Penalty {
     }
 }
 
-fn apply_action(a: &PlayerAction, b: &mut Board) -> Result<u8, Penalty> {
+pub fn apply_action(a: &PlayerAction, b: &mut Board) -> Result<u8, Penalty> {
     try_set_active_mino(b)?; // this also handles top-out.
     match a.action_type() {
         PlayerActions::RotateCW => match a.action_as_rotate_cw() {
@@ -912,648 +906,3 @@ fn apply_horizontal(a: &Horizontal, board: &mut Board) -> Result<u8, Penalty> {
 }
 
 // ==== Start test-related code ====
-
-fn split_two_board_ascii_art(two_board_ascii_art: &str) -> (String, String) {
-    assert!(two_board_ascii_art.contains(">")); // delimiter between boards
-    let tmp: (Vec<&str>, Vec<&str>) = two_board_ascii_art
-        .split("\n")
-        .map(|line| line.split(">").collect::<Vec<&str>>())
-        .filter(|pair| pair.len() == 2)
-        .map(|mut pair| (pair.swap_remove(0), pair.swap_remove(0)))
-        .unzip();
-    (tmp.0.join("\n"), tmp.1.join("\n"))
-}
-
-fn run_player_actions_on_board(
-    actions: Vec<PlayerActionsT>,
-    board_ascii_art: &str,
-) -> Result<(Board, u8), Penalty> {
-    let mut board = Board::from_ascii_art(board_ascii_art);
-    let mut bob = FlatBufferBuilder::with_capacity(BOARD_HEIGHT);
-    let mut total_lines_sent = 0;
-    for action in actions {
-        bob.reset();
-        let packed = PlayerActionT { action }.pack(&mut bob);
-        bob.finish(packed, None);
-        let buf = bob.finished_data();
-        let action2 = flatbuffers::root::<PlayerAction>(buf).unwrap();
-        match apply_action(&action2, &mut board) {
-            Ok(lines_sent) => {
-                total_lines_sent += lines_sent;
-            }
-            Err(x) => return Err(x),
-        }
-    }
-    Ok((board, total_lines_sent))
-}
-
-fn test_player_action_leads_to_board_and_lines_sent(
-    actions: Vec<PlayerActionsT>,
-    two_board_ascii_art: &str,
-    want_total_lines_sent: u8,
-) -> Result<(), Penalty> {
-    let (board_start_string, board_want_string) = split_two_board_ascii_art(two_board_ascii_art);
-    let want = Board::from_ascii_art(&board_want_string);
-
-    let (board, total_lines_sent) =
-        run_player_actions_on_board(actions, board_start_string.as_str())?;
-    if board != want {
-        println!("got:\n{}", board);
-        println!("want:\n{}", want);
-        panic!();
-    }
-    // assert_eq!(board, want);
-    assert_eq!(total_lines_sent, want_total_lines_sent);
-    Ok(())
-}
-fn test_player_action_leads_to_board(
-    actions: Vec<PlayerActionsT>,
-    two_board_ascii_art: &str,
-) -> Result<(), Penalty> {
-    test_player_action_leads_to_board_and_lines_sent(actions, two_board_ascii_art, 0)
-}
-
-#[cfg(test)]
-#[test]
-fn test_oritentation_rotation() {
-    for o in [
-        Orientation::Up,
-        Orientation::Down,
-        Orientation::Left,
-        Orientation::Right,
-    ] {
-        assert_eq!(o, o.rotate_cw().rotate_ccw());
-        assert_ne!(o, o.rotate_cw());
-        assert_eq!(o, o.rotate_180().rotate_180());
-        assert_eq!(o.rotate_cw().rotate_cw(), o.rotate_180());
-        assert_eq!(o.rotate_ccw().rotate_ccw(), o.rotate_180());
-    }
-}
-
-// shorthands for creating Player Actions.
-fn rotate_cw() -> PlayerActionsT {
-    PlayerActionsT::RotateCW(Box::new(RotateCWT {}))
-}
-fn rotate_ccw() -> PlayerActionsT {
-    PlayerActionsT::RotateCCW(Box::new(RotateCCWT {}))
-}
-fn rotate_180() -> PlayerActionsT {
-    PlayerActionsT::Rotate180(Box::new(Rotate180T {}))
-}
-fn hold() -> PlayerActionsT {
-    PlayerActionsT::Hold(Box::new(HoldT {}))
-}
-fn hard_drop() -> PlayerActionsT {
-    PlayerActionsT::HardDrop(Box::new(HardDropT {}))
-}
-fn soft_drop(repeats: u16) -> PlayerActionsT {
-    PlayerActionsT::SoftDrop(Box::new(SoftDropT { repeats: repeats }))
-}
-fn horizontal(right: i8) -> PlayerActionsT {
-    PlayerActionsT::Horizontal(Box::new(HorizontalT { right: right }))
-}
-
-#[cfg(test)]
-#[test]
-fn test_tspin_triple() -> Result<(), Penalty> {
-    test_player_action_leads_to_board_and_lines_sent(
-        vec![
-            rotate_cw(),
-            horizontal(-1),
-            soft_drop(2),
-            rotate_ccw(),
-            rotate_ccw(),
-            hard_drop(),
-        ],
-        "
-    _|    |T  >  _|    | 
-     |    |   >   |    | 
-     |  ..|   >   |    | 
-     |   .|   >   |    | 
-     |.. .|   >   |    | 
-     |.  .|   >   |  ..| 
-     |.. .|   >   |   .| 
-    ",
-        2, // this should be more in the future
-    )
-}
-
-#[cfg(test)]
-#[test]
-fn test_zspin_double() -> Result<(), Penalty> {
-    test_player_action_leads_to_board_and_lines_sent(
-        vec![rotate_ccw(), soft_drop(2), rotate_ccw(), hard_drop()],
-        "
-    _|    |Z  >  _|    | 
-     |    |   >   |    | 
-     |  ..|   >   |    | 
-     |.  .|   >   |    | 
-    ",
-        1,
-    )
-}
-
-mod perfect_clear_openers {
-    use core::panic;
-    use std::collections::HashSet;
-
-    use super::*;
-
-    fn test_perfect_clear_opener(upcoming_minos: &str) {
-        let board_ascii_art = "
-        _|          |
-         |...     ..|
-         |...    ...|
-         |...   ....|
-         |...    ...|
-        ";
-        let mut start_board = Board::from_ascii_art(board_ascii_art);
-        let str_to_mino_type = get_str_to_mino_type();
-
-        for mino_type_char in upcoming_minos.chars() {
-            let mino_type_string = mino_type_char.to_string();
-            let mino_type_str: &str = &mino_type_string;
-            let mino_type = str_to_mino_type[mino_type_str];
-            start_board.upcoming_minos.push_back(mino_type);
-        }
-
-        // Search for actions that do a perfect clear on the board
-        let mut seen = HashSet::<Board>::new();
-        let start_history: Vec<PlayerActionsT> = vec![];
-        let mut search_queue =
-            VecDeque::<(Board, Vec<PlayerActionsT>)>::from([(start_board, start_history)]);
-        let mut bob = FlatBufferBuilder::with_capacity(BOARD_HEIGHT);
-        while let Some((parent, history)) = search_queue.pop_front() {
-            if seen.contains(&parent) {
-                continue; // never repeat state
-            }
-
-            let potential_actions = [
-                hard_drop(),
-                rotate_ccw(),
-                rotate_cw(),
-                rotate_180(),
-                soft_drop(1),
-                soft_drop(2),
-                soft_drop(3),
-                soft_drop(4),
-                soft_drop(5),
-                horizontal(1),
-                horizontal(-1),
-                horizontal(2),
-                horizontal(-2),
-                horizontal(3),
-                horizontal(-3),
-                horizontal(4),
-                horizontal(-4),
-            ];
-            for action in potential_actions {
-                bob.reset();
-                let packed = PlayerActionT {
-                    action: action.clone(),
-                }
-                .pack(&mut bob);
-                bob.finish(packed, None);
-                let buf = bob.finished_data();
-                let action2 = flatbuffers::root::<PlayerAction>(buf).unwrap();
-                let mut child = parent.clone();
-                let debug1 = format!("{}", parent);
-                let debug2 = format!("{:?}", history);
-                match apply_action(&action2, &mut child) {
-                    Ok(_) => {
-                        if child.rows[0] == 0 {
-                            return; // found perfect clear
-                        }
-                        if child.rows[4] == 0 {
-                            // never hard drop to above 4 high
-                            let mut child_history = history.clone();
-                            child_history.push(action.clone());
-                            search_queue.push_back((child, child_history));
-                        }
-                    }
-                    Err(_) => (),
-                }
-            }
-
-            seen.insert(parent);
-        }
-        panic!("could not find a solution");
-    }
-
-    macro_rules! test_pco {
-        ($name:ident) => {
-            #[allow(non_snake_case)]
-            #[test]
-            fn $name() {
-                test_perfect_clear_opener(stringify!($name));
-            }
-        };
-    }
-
-    test_pco!(IJIT);
-}
-
-#[cfg(test)]
-#[test]
-fn test_skim_t() -> Result<(), Penalty> {
-    test_player_action_leads_to_board(
-        vec![hard_drop()],
-        "
-    _|   .|T  >  _|    | 
-     |   .|   >   | . .| 
-     |  ..|   >   |  ..| 
-    ",
-    )
-}
-#[cfg(test)]
-#[test]
-fn test_clutch() -> Result<(), Penalty> {
-    test_player_action_leads_to_board(
-        vec![hard_drop()],
-        "
-    _|.    .|I  >  _|      | 
-    ",
-    )
-}
-
-#[cfg(test)]
-#[test]
-fn test_i_multi_clear() -> Result<(), Penalty> {
-    test_player_action_leads_to_board_and_lines_sent(
-        vec![rotate_ccw(), hard_drop()],
-        "
-    _|    |I  >  _|    | 
-     |. ..|   >   | .  | 
-     |. ..|   >   | .  | 
-    ",
-        1,
-    )?;
-    test_player_action_leads_to_board_and_lines_sent(
-        vec![rotate_ccw(), hard_drop()],
-        "
-    _|    |I  >  _|    | 
-     |. ..|   >   |    | 
-     |. ..|   >   |    | 
-     |. ..|   >   | .  | 
-    ",
-        2,
-    )?;
-    test_player_action_leads_to_board_and_lines_sent(
-        vec![rotate_ccw(), hard_drop()],
-        "
-    _|    |I  >  _|    | 
-     |. ..|   >   |    | 
-     |   .|   >   |    | 
-     |. ..|   >   |    | 
-     |. ..|   >   | . .| 
-    ",
-        2,
-    )?;
-    test_player_action_leads_to_board_and_lines_sent(
-        vec![rotate_ccw(), hard_drop()],
-        "
-    _|    |I  >  _|    | 
-     |. ..|   >   |    | 
-     |. ..|   >   |    | 
-     |. ..|   >   |    | 
-     |. ..|   >   |    | 
-    ",
-        4, // tetris!
-    )
-}
-
-#[cfg(test)]
-#[test]
-fn test_penalty_i_rotate_180() {
-    match run_player_actions_on_board(
-        vec![soft_drop(2), rotate_180()],
-        "
-       _|          |I
-        |...     ..| 
-        |...    ...| 
-        |...   ....| 
-        |...    ...| 
-       ",
-    ) {
-        Ok(_) => panic!("expected error"),
-        Err(penalty) => assert!(
-            penalty.reason.contains("Can not rotate"),
-            "wrong error string: {}",
-            penalty.reason
-        ),
-    }
-}
-#[cfg(test)]
-#[test]
-fn test_penalty_i_soft_drop() {
-    match run_player_actions_on_board(
-        vec![rotate_ccw(), horizontal(2), soft_drop(1)],
-        "
-       _|          |I
-        |...     ..| 
-        |...    ...| 
-        |...   ....| 
-        |...    ...| 
-       ",
-    ) {
-        Ok((board, _)) => {
-            panic!("expected error but got this board instead: \n{}", board)
-        }
-        Err(penalty) => assert!(
-            penalty.reason.contains("Can not rotate"),
-            "wrong error string: {}",
-            penalty.reason
-        ),
-    }
-}
-
-#[cfg(test)]
-#[test]
-fn test_spawn_blocked() {
-    match run_player_actions_on_board(
-        vec![hard_drop()],
-        "
-        _|   .|I",
-    ) {
-        Ok(_) => panic!("not supposed to work"),
-        Err(penalty) => assert!(
-            penalty.reason.contains("TOP-OUT!"),
-            "wrong error string: {}",
-            penalty.reason
-        ),
-    }
-}
-
-#[cfg(test)]
-#[test]
-fn test_i_spin_at_top() -> Result<(), Penalty> {
-    test_player_action_leads_to_board_and_lines_sent(
-        vec![rotate_cw(), hard_drop()],
-        "
-    _|    |I  >  _|    | 
-     |... |   >   |    | 
-     |... |   >   |    | 
-     |... |   >   |    | 
-     |... |   >   |    | 
-    ",
-        4,
-    )?;
-    test_player_action_leads_to_board_and_lines_sent(
-        vec![rotate_cw(), hard_drop()],
-        "
-    _|    |I  >  _|    | 
-     |    |   >   |    | 
-     |... |   >   |    | 
-     |... |   >   |    | 
-     |... |   >   |    | 
-     |... |   >   |    | 
-    ",
-        4,
-    )?;
-    test_player_action_leads_to_board_and_lines_sent(
-        vec![rotate_cw(), hard_drop()],
-        "
-    _|    |I  >  _|    | 
-     |    |   >   |    | 
-     |... |   >   |    | 
-     |... |   >   |    | 
-     |... |   >   |    | 
-     |... |   >   |    | 
-    ",
-        4,
-    )?;
-    test_player_action_leads_to_board_and_lines_sent(
-        vec![rotate_cw(), hard_drop()],
-        "
-              >   |  . | 
-    _|    |I  >  _|  . | 
-     |    |   >   |  . | 
-     |    |   >   |  . | 
-     |... |   >   |... | 
-     |... |   >   |... | 
-     |... |   >   |... | 
-     |... |   >   |... | 
-    ",
-        0,
-    )?;
-    test_player_action_leads_to_board_and_lines_sent(
-        vec![rotate_cw(), horizontal(1), hard_drop()],
-        "
-    _|    |I  >  _|    | 
-     |    |   >   |    | 
-     |    |   >   |    | 
-     |    |   >   |    | 
-     |    |   >   |    | 
-     |... |   >   |    | 
-     |... |   >   |    | 
-     |... |   >   |    | 
-     |... |   >   |    | 
-    ",
-        4, // tetris!
-    )
-}
-
-#[cfg(test)]
-#[test]
-fn test_flip_t_skim() -> Result<(), Penalty> {
-    test_player_action_leads_to_board(
-        vec![rotate_180(), hard_drop()],
-        "
-    _|   .|T  >  _|    | 
-     |   .|   >   |   .| 
-     |  ..|   >   | ...| 
-    ",
-    )
-}
-
-#[cfg(test)]
-#[test]
-fn test_apply_hold() -> Result<(), Penalty> {
-    test_player_action_leads_to_board(
-        vec![hold(), hold(), hard_drop()],
-        "
-    _|    |T  >  _|    | 
-     |    |Z  >  Z| .  | 
-     |    |   >   |... | 
-    ",
-    )?;
-    test_player_action_leads_to_board(
-        vec![hold(), hard_drop()],
-        "
-    _|    |T  >  _|    | 
-     |    |Z  >  T|..  | 
-     |    |   >   | .. | 
-    ",
-    )
-}
-#[cfg(test)]
-#[test]
-fn test_apply_horizontal() -> Result<(), Penalty> {
-    test_player_action_leads_to_board(
-        vec![horizontal(1), hard_drop()],
-        "
-    _|    |T  >  _|    | 
-     |    |   >   |  . | 
-     |    |   >   | ...| 
-    ",
-    )
-}
-#[cfg(test)]
-#[test]
-fn test_apply_horizontal_penalty() {
-    match run_player_actions_on_board(
-        vec![horizontal(-1)],
-        "
-        _|    |T
-         |    |
-         |    |",
-    ) {
-        Ok(_) => panic!("not supposed to work"),
-        Err(penalty) => assert!(penalty.reason.contains("past left edge")),
-    }
-    match run_player_actions_on_board(
-        vec![horizontal(2)],
-        "
-        _|    |T
-         |    |
-         |    |",
-    ) {
-        Ok(_) => panic!("not supposed to work"),
-        Err(penalty) => assert!(penalty.reason.contains("past right edge")),
-    }
-}
-
-#[cfg(test)]
-#[test]
-fn test_apply_hard_drop() -> Result<(), Penalty> {
-    test_player_action_leads_to_board(
-        vec![hard_drop()],
-        "
-    _|    |T  >  _|    |I 
-     |    |I  >   |    | 
-     |    |   >   | .  | 
-     |    |   >   |... | 
-    ",
-    )
-}
-#[cfg(test)]
-#[test]
-fn test_apply_hard_drop_ti() -> Result<(), Penalty> {
-    test_player_action_leads_to_board(
-        vec![hard_drop(), hard_drop()],
-        "
-        _|    |T  >  _|    |
-         |    |I  >   |    |  // horizontal I-piece line clear
-         |    |   >   | .  |
-         |    |   >   |... |
-        ",
-    )
-}
-#[cfg(test)]
-#[test]
-fn test_apply_hard_drop_to() -> Result<(), Penalty> {
-    test_player_action_leads_to_board(
-        vec![hard_drop(), hard_drop()],
-        "
-        _|    |T  >  _| .. |
-         |    |O  >   | .. |
-         |    |   >   | .  |
-         |    |   >   |... |
-        ",
-    )
-}
-
-#[cfg(test)]
-#[test]
-fn test_apply_hard_drop_j() -> Result<(), Penalty> {
-    test_player_action_leads_to_board(
-        vec![hard_drop()],
-        "
-        _|    |J  >  _|    |
-         |    |   >   |    |
-         |    |   >   |.   |
-         |    |   >   |... |
-        ",
-    )
-}
-
-#[cfg(test)]
-#[test]
-fn test_apply_hard_drop_l() -> Result<(), Penalty> {
-    test_player_action_leads_to_board(
-        vec![hard_drop()],
-        "
-        _|    |L  >  _|    |
-         |    |   >   |    |
-         |    |   >   |  . |
-         |    |   >   |... |
-        ",
-    )
-}
-#[cfg(test)]
-#[test]
-fn test_apply_hard_drop_s() -> Result<(), Penalty> {
-    test_player_action_leads_to_board(
-        vec![hard_drop()],
-        "
-        _|    |S  >  _|    |
-         |    |   >   |    |
-         |    |   >   | .. |
-         |    |   >   |..  |
-        ",
-    )
-}
-#[cfg(test)]
-#[test]
-fn test_apply_hard_drop_z() -> Result<(), Penalty> {
-    test_player_action_leads_to_board(
-        vec![hard_drop()],
-        "
-        _|    |Z  >  _|    |
-         |    |   >   |    |
-         |    |   >   |..  |
-         |    |   >   | .. |
-        ",
-    )
-}
-
-#[cfg(test)]
-#[test]
-fn test_squares_below_pivot() {
-    let mut mino = Mino {
-        mino_type: MinoType::I,
-        orientation: Orientation::Right,
-        pivot_x: 0,
-        pivot_y: 0,
-    };
-    assert_eq!(mino.squares_below_pivot(), 2);
-    mino.orientation = Orientation::Left;
-    assert_eq!(mino.squares_below_pivot(), 1);
-    mino.orientation = Orientation::Up;
-    assert_eq!(mino.squares_below_pivot(), 0);
-    mino.orientation = Orientation::Down;
-    assert_eq!(mino.squares_below_pivot(), 0);
-}
-
-#[cfg(test)]
-#[test]
-fn test_apply_soft_drop_with_serialization() {
-    let mut b = Board::new(VecDeque::from([MinoType::T]));
-    let mut bob = FlatBufferBuilder::with_capacity(1000);
-    let drop = SoftDrop::create(&mut bob, &SoftDropArgs { repeats: 3 });
-    let action = PlayerAction::create(
-        &mut bob,
-        &PlayerActionArgs {
-            action_type: PlayerActions::SoftDrop,
-            action: Some(drop.as_union_value()),
-        },
-    );
-    bob.finish(action, None);
-    let buf = bob.finished_data();
-    let action2 = flatbuffers::root::<PlayerAction>(buf).unwrap();
-
-    // let drop2 = unsafe { SoftDrop::follow(bytes, 0) };
-
-    assert_eq!(action2.action_as_soft_drop().unwrap().repeats(), 3);
-    assert_eq!(apply_action(&action2, &mut b), Ok(0));
-}
