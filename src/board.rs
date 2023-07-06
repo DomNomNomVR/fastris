@@ -853,15 +853,15 @@ fn apply_soft_drop(a: &SoftDrop, board: &mut Board) -> Result<u8, Penalty> {
     if repeats as usize > mask.bottom_row {
         return Err(Penalty::new("trying to soft drop below floor"));
     }
-    let mut new_pivot_y = mino.pivot_y - repeats;
-    for row_i in (new_pivot_y..mino.pivot_y).rev() {
-        mask.bottom_row = row_i;
+    let new_pivot_y = mino.pivot_y - repeats;
+    let squares_below = mino.squares_below_pivot() as usize;
+    for pivot_y in (new_pivot_y..mino.pivot_y).rev() {
+        mask.bottom_row = pivot_y - squares_below; // TODO: optimization: put squares_below into the range instead.
         if test_intersection(&mask, &board.rows) {
             // return Err(Pentalty::new("Soft drop collided with exiting piece"))
             // Let's be forgiving as the board could've been bumped up without their knowledge.
-            let new_bottom = row_i + 1;
-            new_pivot_y = new_bottom + mino.squares_below_pivot() as usize;
-            break;
+            mino.pivot_y = pivot_y + 1;
+            return Ok(0);
         }
     }
     mino.pivot_y = new_pivot_y;
@@ -1224,8 +1224,8 @@ fn test_i_multi_clear() -> Result<(), Penalty> {
 
 #[cfg(test)]
 #[test]
-fn test_i_rotate_180() {
-    let foo = run_player_actions_on_board(
+fn test_penalty_i_rotate_180() {
+    match run_player_actions_on_board(
         vec![soft_drop(2), rotate_180()],
         "
        _|          |I
@@ -1234,9 +1234,31 @@ fn test_i_rotate_180() {
         |...   ....| 
         |...    ...| 
        ",
-    );
-    match foo {
+    ) {
         Ok(_) => panic!("expected error"),
+        Err(penalty) => assert!(
+            penalty.reason.contains("Can not rotate"),
+            "wrong error string: {}",
+            penalty.reason
+        ),
+    }
+}
+#[cfg(test)]
+#[test]
+fn test_penalty_i_soft_drop() {
+    match run_player_actions_on_board(
+        vec![rotate_ccw(), horizontal(2), soft_drop(1)],
+        "
+       _|          |I
+        |...     ..| 
+        |...    ...| 
+        |...   ....| 
+        |...    ...| 
+       ",
+    ) {
+        Ok((board, _)) => {
+            panic!("expected error but got this board instead: \n{}", board)
+        }
         Err(penalty) => assert!(
             penalty.reason.contains("Can not rotate"),
             "wrong error string: {}",
