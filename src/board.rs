@@ -344,8 +344,8 @@ pub fn mask_from_mino(m: &Mino, board_width: i8) -> Result<MinoMask, Penalty> {
             }),
             Orientation::Right => Ok(MinoMask {
                 covered: [
-                    0b11 << (shift_to_pivot - 0),
-                    0b11 << (shift_to_pivot - 0),
+                    0b11 << (shift_to_pivot - 1),
+                    0b11 << (shift_to_pivot - 1),
                     0,
                     0,
                 ],
@@ -353,8 +353,8 @@ pub fn mask_from_mino(m: &Mino, board_width: i8) -> Result<MinoMask, Penalty> {
             }),
             Orientation::Left => Ok(MinoMask {
                 covered: [
-                    0b11 << (shift_to_pivot - 1),
-                    0b11 << (shift_to_pivot - 1),
+                    0b11 << (shift_to_pivot - 0),
+                    0b11 << (shift_to_pivot - 0),
                     0,
                     0,
                 ],

@@ -1,9 +1,28 @@
 {
-    // Use IntelliSense to learn about possible attributes.
-    // Hover to view descriptions of existing attributes.
-    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'fastris'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=fastris"
+                ],
+                "filter": {
+                    "name": "fastris",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "initCommands": [
+                "command source '${workspaceFolder}/my_type_formatters.txt'"
+            ]
+        },
         {
             "type": "lldb",
             "request": "launch",
@@ -20,7 +39,10 @@
                 }
             },
             "args": [],
-            "cwd": "${workspaceFolder}"
+            "cwd": "${workspaceFolder}",
+            "initCommands": [
+                "command source '${workspaceFolder}/my_type_formatters.txt'"
+            ]
         },
         {
             "type": "lldb",
@@ -39,7 +61,32 @@
                 }
             },
             "args": [],
-            "cwd": "${workspaceFolder}"
+            "cwd": "${workspaceFolder}",
+            "initCommands": [
+                "command source '${workspaceFolder}/my_type_formatters.txt'"
+            ]
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'board_tests'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=board_tests",
+                    "--package=fastris"
+                ],
+                "filter": {
+                    "name": "board_tests",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "initCommands": [
+                "command source '${workspaceFolder}/my_type_formatters.txt'"
+            ]
         }
-    ]
+    ],
 }

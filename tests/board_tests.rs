@@ -178,8 +178,6 @@ mod tests {
         use super::*;
 
         fn test_perfect_clear_opener(upcoming_minos: &str) {
-            // let mut foo: &[u8] = &[];
-            let mut foo: Vec<u8> = Vec::new();
             let board_ascii_art = "
         _|          |
          |...     ..|
@@ -189,7 +187,7 @@ mod tests {
         ";
 
             let solution_path = format!("tests/test_data/PCO_{}.flat", upcoming_minos);
-            let mut found_solution = false; // std::path::Path::new(&solution_path).exists();
+            let mut found_solution = std::path::Path::new(&solution_path).exists();
 
             let mut start_board = Board::from_ascii_art(board_ascii_art);
             start_board.add_upcoming_minos_from_str(upcoming_minos);
@@ -226,6 +224,7 @@ mod tests {
                     horizontal(-3),
                     horizontal(4),
                     horizontal(-4),
+                    // note: hold disabled.
                 ];
                 for action in potential_actions {
                     bob.reset();
@@ -259,7 +258,6 @@ mod tests {
 
                                 fs::write(&solution_path, buf).expect("Unable to write file");
                                 found_solution = true;
-                                foo = Vec::from(buf);
                             } else if child.rows[4] == 0 {
                                 // never hard drop to above 4 high
                                 let mut child_history = history.clone();
@@ -278,26 +276,14 @@ mod tests {
                 panic!("could not find a solution");
             }
             let buf: Vec<u8> = fs::read(&solution_path).expect("Unable to read file");
-            assert_eq!(&buf[..], foo);
-            // let mut buf2 = [0u8; 1024];
-            // assert!(buf.len() <= buf2.len()); // bleh - flatbuffers are annoying in this regard.
-            // for (i, x) in buf.into_iter().enumerate() {
-            //     buf2[i] = x;
-            // }
-            // let action_list =
-            //     flatbuffers::root::<PlayerActionList>(&buf2).expect("unable to deserialize");
-            // my_game::example::get_root_as_monster
 
             let action_list =
-                fastris::client_generated::fastris::client::root_as_player_action_list(&buf[..])
-                    .expect("unable to deserialize");
-            // let action_list = flatbuffers::root::<PlayerActionList>(&buf[..]).unwrap();
+                flatbuffers::root::<PlayerActionList>(&buf[..]).expect("unable to deserialize");
             let mut board = Board::from_ascii_art(board_ascii_art);
             board.add_upcoming_minos_from_str(upcoming_minos);
 
-            println!("efff {:?}", action_list.actions());
             for action in action_list.actions().unwrap() {
-                println!("{}\n{:?}", board, action);
+                // println!("{}\n{:?}", board, action);
                 match apply_action(&action, &mut board) {
                     Ok(_) => {}
                     Err(penanty) => panic!("unexpected pentaly {:?}", penanty),
@@ -315,8 +301,191 @@ mod tests {
                 }
             };
         }
-
+        test_pco!(IIJT);
+        test_pco!(IILO);
+        test_pco!(IIOJ);
+        test_pco!(IIOL);
+        test_pco!(IISJ);
+        test_pco!(IITJ);
+        test_pco!(IITL);
+        test_pco!(IITO);
+        test_pco!(IITS);
+        test_pco!(IIZL);
         test_pco!(IJIT);
+        test_pco!(IJOT);
+        test_pco!(IJST);
+        test_pco!(IJTI);
+        test_pco!(IJTO);
+        test_pco!(IJTS);
+        test_pco!(IJTZ);
+        test_pco!(IJZS);
+        test_pco!(IJZT);
+        test_pco!(ILIO);
+        test_pco!(ILIT);
+        test_pco!(ILIZ);
+        test_pco!(ILOS);
+        test_pco!(ILOT);
+        test_pco!(ILST);
+        test_pco!(ILTI);
+        test_pco!(ILTJ);
+        test_pco!(ILTO);
+        test_pco!(ILTS);
+        test_pco!(ILTZ);
+        test_pco!(ILZI);
+        test_pco!(ILZT);
+        test_pco!(IOIJ);
+        test_pco!(IOJI);
+        test_pco!(IOJS);
+        test_pco!(IOJT);
+        test_pco!(IOSJ);
+        test_pco!(IOTJ);
+        test_pco!(ISIJ);
+        test_pco!(ISJI);
+        test_pco!(ISJT);
+        test_pco!(ISOJ);
+        test_pco!(ISTI);
+        test_pco!(ISTJ);
+        test_pco!(ISTL);
+        test_pco!(ISTO);
+        test_pco!(ISZL);
+        test_pco!(ITIJ);
+        test_pco!(ITIL);
+        test_pco!(ITIO);
+        test_pco!(ITIS);
+        test_pco!(ITJI);
+        test_pco!(ITJL);
+        test_pco!(ITJO);
+        test_pco!(ITJS);
+        test_pco!(ITJZ);
+        test_pco!(ITLI);
+        test_pco!(ITLJ);
+        test_pco!(ITLO);
+        test_pco!(ITLS);
+        test_pco!(ITLZ);
+        test_pco!(ITOI);
+        test_pco!(ITOJ);
+        test_pco!(ITSI);
+        test_pco!(ITSJ);
+        test_pco!(ITSL);
+        test_pco!(ITSO);
+        test_pco!(ITSZ);
+        test_pco!(ITZS);
+        test_pco!(IZIL);
+        test_pco!(IZJS);
+        test_pco!(IZLI);
+        test_pco!(IZSJ);
+        test_pco!(IZSL);
+        test_pco!(JIIT);
+        test_pco!(JIOT);
+        test_pco!(JIST);
+        test_pco!(JITI);
+        test_pco!(JITO);
+        test_pco!(JIZS);
+        test_pco!(JIZT);
+        test_pco!(JSIT);
+        test_pco!(JSOT);
+        test_pco!(JSTI);
+        test_pco!(JSTZ);
+        test_pco!(JSZT);
+        test_pco!(JTII);
+        test_pco!(JTLS);
+        test_pco!(JZST);
+        test_pco!(LIIT);
+        test_pco!(LIOT);
+        test_pco!(LIST);
+        test_pco!(LITI);
+        test_pco!(LITS);
+        test_pco!(LITZ);
+        test_pco!(LIZT);
+        test_pco!(LOSI);
+        test_pco!(LOST);
+        test_pco!(LSIO);
+        test_pco!(LSOI);
+        test_pco!(LSOT);
+        test_pco!(LSTZ);
+        test_pco!(LTII);
+        test_pco!(LTJS);
+        test_pco!(LTSZ);
+        test_pco!(LTZS);
+        test_pco!(LZST);
+        test_pco!(LZTS);
+        test_pco!(OIIJ);
+        test_pco!(OIJI);
+        test_pco!(OIJS);
+        test_pco!(OIJT);
+        test_pco!(OJIT);
+        test_pco!(OTLS);
+        test_pco!(SIIJ);
+        test_pco!(SIJI);
+        test_pco!(SIJT);
+        test_pco!(SIOJ);
+        test_pco!(SITI);
+        test_pco!(SITJ);
+        test_pco!(SITL);
+        test_pco!(SITO);
+        test_pco!(SIZL);
+        test_pco!(SJOT);
+        test_pco!(SJZT);
+        test_pco!(SLTZ);
+        test_pco!(STII);
+        test_pco!(STIJ);
+        test_pco!(STIO);
+        test_pco!(STIZ);
+        test_pco!(STJI);
+        test_pco!(STJL);
+        test_pco!(STJZ);
+        test_pco!(STLJ);
+        test_pco!(STOI);
+        test_pco!(STOL);
+        test_pco!(STZL);
+        test_pco!(SZIJ);
+        test_pco!(SZJT);
+        test_pco!(SZTJ);
+        test_pco!(TIIJ);
+        test_pco!(TIIL);
+        test_pco!(TIIO);
+        test_pco!(TIIS);
+        test_pco!(TIJI);
+        test_pco!(TIJL);
+        test_pco!(TIJO);
+        test_pco!(TIJS);
+        test_pco!(TIJZ);
+        test_pco!(TILI);
+        test_pco!(TILJ);
+        test_pco!(TILO);
+        test_pco!(TILS);
+        test_pco!(TILZ);
+        test_pco!(TIOI);
+        test_pco!(TIOJ);
+        test_pco!(TISJ);
+        test_pco!(TISL);
+        test_pco!(TISZ);
+        test_pco!(TIZS);
+        test_pco!(TJIS);
+        test_pco!(TJLS);
+        test_pco!(TJSI);
+        test_pco!(TLII);
+        test_pco!(TLJS);
+        test_pco!(TOSL);
+        test_pco!(TSIJ);
+        test_pco!(TSIZ);
+        test_pco!(TSJI);
+        test_pco!(TSJZ);
+        test_pco!(TSOL);
+        test_pco!(TSZL);
+        test_pco!(TZIS);
+        test_pco!(TZLO);
+        test_pco!(TZLS);
+        test_pco!(TZSL);
+        test_pco!(ZIIL);
+        test_pco!(ZIJS);
+        test_pco!(ZILI);
+        test_pco!(ZISJ);
+        test_pco!(ZJST);
+        test_pco!(ZLTO);
+        test_pco!(ZSIJ);
+        test_pco!(ZSJT);
+        test_pco!(ZTLO);
     }
 
     #[test]
