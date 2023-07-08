@@ -172,10 +172,14 @@ mod tests {
     mod perfect_clear_openers {
         use core::panic;
         use std::collections::HashSet;
+        use std::fmt::format;
+        use std::fs;
 
         use super::*;
 
         fn test_perfect_clear_opener(upcoming_minos: &str) {
+            // let mut foo: &[u8] = &[];
+            let mut foo: Vec<u8> = Vec::new();
             let board_ascii_art = "
         _|          |
          |...     ..|
@@ -183,15 +187,12 @@ mod tests {
          |...   ....|
          |...    ...|
         ";
-            let mut start_board = Board::from_ascii_art(board_ascii_art);
-            let str_to_mino_type = get_str_to_mino_type();
 
-            for mino_type_char in upcoming_minos.chars() {
-                let mino_type_string = mino_type_char.to_string();
-                let mino_type_str: &str = &mino_type_string;
-                let mino_type = str_to_mino_type[mino_type_str];
-                start_board.upcoming_minos.push_back(mino_type);
-            }
+            let solution_path = format!("tests/test_data/PCO_{}.flat", upcoming_minos);
+            let mut found_solution = false; // std::path::Path::new(&solution_path).exists();
+
+            let mut start_board = Board::from_ascii_art(board_ascii_art);
+            start_board.add_upcoming_minos_from_str(upcoming_minos);
 
             // Search for actions that do a perfect clear on the board
             let mut seen = HashSet::<Board>::new();
@@ -202,6 +203,9 @@ mod tests {
             while let Some((parent, history)) = search_queue.pop_front() {
                 if seen.contains(&parent) {
                     continue; // never repeat state
+                }
+                if found_solution {
+                    break;
                 }
 
                 let potential_actions = [
@@ -237,9 +241,26 @@ mod tests {
                     match apply_action(&action2, &mut child) {
                         Ok(_) => {
                             if child.rows[0] == 0 {
-                                return; // found perfect clear
-                            }
-                            if child.rows[4] == 0 {
+                                // Found a solution. Write it to disk
+                                let mut action_list = PlayerActionListT::default();
+                                let mut a_list = Vec::<PlayerActionT>::new();
+                                for a in history.clone().into_iter().chain([action]) {
+                                    let mut player_action = PlayerActionT::default();
+                                    player_action.action = a;
+                                    a_list.push(player_action);
+                                }
+                                action_list.actions = Some(a_list);
+                                bob.reset();
+                                let packed = action_list.pack(&mut bob);
+                                bob.finish(packed, None);
+                                let buf = bob.finished_data();
+                                fastris::client_generated::fastris::client::root_as_player_action_list(buf)
+                                    .expect("unable to deserialize");
+
+                                fs::write(&solution_path, buf).expect("Unable to write file");
+                                found_solution = true;
+                                foo = Vec::from(buf);
+                            } else if child.rows[4] == 0 {
                                 // never hard drop to above 4 high
                                 let mut child_history = history.clone();
                                 child_history.push(action.clone());
@@ -252,7 +273,37 @@ mod tests {
 
                 seen.insert(parent);
             }
-            panic!("could not find a solution");
+
+            if !found_solution {
+                panic!("could not find a solution");
+            }
+            let buf: Vec<u8> = fs::read(&solution_path).expect("Unable to read file");
+            assert_eq!(&buf[..], foo);
+            // let mut buf2 = [0u8; 1024];
+            // assert!(buf.len() <= buf2.len()); // bleh - flatbuffers are annoying in this regard.
+            // for (i, x) in buf.into_iter().enumerate() {
+            //     buf2[i] = x;
+            // }
+            // let action_list =
+            //     flatbuffers::root::<PlayerActionList>(&buf2).expect("unable to deserialize");
+            // my_game::example::get_root_as_monster
+
+            let action_list =
+                fastris::client_generated::fastris::client::root_as_player_action_list(&buf[..])
+                    .expect("unable to deserialize");
+            // let action_list = flatbuffers::root::<PlayerActionList>(&buf[..]).unwrap();
+            let mut board = Board::from_ascii_art(board_ascii_art);
+            board.add_upcoming_minos_from_str(upcoming_minos);
+
+            println!("efff {:?}", action_list.actions());
+            for action in action_list.actions().unwrap() {
+                println!("{}\n{:?}", board, action);
+                match apply_action(&action, &mut board) {
+                    Ok(_) => {}
+                    Err(penanty) => panic!("unexpected pentaly {:?}", penanty),
+                }
+            }
+            assert_eq!(board.rows[0], 0);
         }
 
         macro_rules! test_pco {

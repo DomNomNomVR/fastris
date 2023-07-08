@@ -1579,6 +1579,211 @@ impl PlayerActionT {
     })
   }
 }
+pub enum PlayerActionListOffset {}
+#[derive(Copy, Clone, PartialEq)]
+
+pub struct PlayerActionList<'a> {
+  pub _tab: flatbuffers::Table<'a>,
+}
+
+impl<'a> flatbuffers::Follow<'a> for PlayerActionList<'a> {
+  type Inner = PlayerActionList<'a>;
+  #[inline]
+  unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
+    Self { _tab: flatbuffers::Table::new(buf, loc) }
+  }
+}
+
+impl<'a> PlayerActionList<'a> {
+  pub const VT_ACTIONS: flatbuffers::VOffsetT = 4;
+
+  pub const fn get_fully_qualified_name() -> &'static str {
+    "Fastris.Client.PlayerActionList"
+  }
+
+  #[inline]
+  pub unsafe fn init_from_table(table: flatbuffers::Table<'a>) -> Self {
+    PlayerActionList { _tab: table }
+  }
+  #[allow(unused_mut)]
+  pub fn create<'bldr: 'args, 'args: 'mut_bldr, 'mut_bldr>(
+    _fbb: &'mut_bldr mut flatbuffers::FlatBufferBuilder<'bldr>,
+    args: &'args PlayerActionListArgs<'args>
+  ) -> flatbuffers::WIPOffset<PlayerActionList<'bldr>> {
+    let mut builder = PlayerActionListBuilder::new(_fbb);
+    if let Some(x) = args.actions { builder.add_actions(x); }
+    builder.finish()
+  }
+
+  pub fn unpack(&self) -> PlayerActionListT {
+    let actions = self.actions().map(|x| {
+      x.iter().map(|t| t.unpack()).collect()
+    });
+    PlayerActionListT {
+      actions,
+    }
+  }
+
+  #[inline]
+  pub fn actions(&self) -> Option<flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<PlayerAction<'a>>>> {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<PlayerAction>>>>(PlayerActionList::VT_ACTIONS, None)}
+  }
+}
+
+impl flatbuffers::Verifiable for PlayerActionList<'_> {
+  #[inline]
+  fn run_verifier(
+    v: &mut flatbuffers::Verifier, pos: usize
+  ) -> Result<(), flatbuffers::InvalidFlatbuffer> {
+    use self::flatbuffers::Verifiable;
+    v.visit_table(pos)?
+     .visit_field::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'_, flatbuffers::ForwardsUOffset<PlayerAction>>>>("actions", Self::VT_ACTIONS, false)?
+     .finish();
+    Ok(())
+  }
+}
+pub struct PlayerActionListArgs<'a> {
+    pub actions: Option<flatbuffers::WIPOffset<flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<PlayerAction<'a>>>>>,
+}
+impl<'a> Default for PlayerActionListArgs<'a> {
+  #[inline]
+  fn default() -> Self {
+    PlayerActionListArgs {
+      actions: None,
+    }
+  }
+}
+
+pub struct PlayerActionListBuilder<'a: 'b, 'b> {
+  fbb_: &'b mut flatbuffers::FlatBufferBuilder<'a>,
+  start_: flatbuffers::WIPOffset<flatbuffers::TableUnfinishedWIPOffset>,
+}
+impl<'a: 'b, 'b> PlayerActionListBuilder<'a, 'b> {
+  #[inline]
+  pub fn add_actions(&mut self, actions: flatbuffers::WIPOffset<flatbuffers::Vector<'b , flatbuffers::ForwardsUOffset<PlayerAction<'b >>>>) {
+    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(PlayerActionList::VT_ACTIONS, actions);
+  }
+  #[inline]
+  pub fn new(_fbb: &'b mut flatbuffers::FlatBufferBuilder<'a>) -> PlayerActionListBuilder<'a, 'b> {
+    let start = _fbb.start_table();
+    PlayerActionListBuilder {
+      fbb_: _fbb,
+      start_: start,
+    }
+  }
+  #[inline]
+  pub fn finish(self) -> flatbuffers::WIPOffset<PlayerActionList<'a>> {
+    let o = self.fbb_.end_table(self.start_);
+    flatbuffers::WIPOffset::new(o.value())
+  }
+}
+
+impl core::fmt::Debug for PlayerActionList<'_> {
+  fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+    let mut ds = f.debug_struct("PlayerActionList");
+      ds.field("actions", &self.actions());
+      ds.finish()
+  }
+}
+#[non_exhaustive]
+#[derive(Debug, Clone, PartialEq)]
+pub struct PlayerActionListT {
+  pub actions: Option<Vec<PlayerActionT>>,
+}
+impl Default for PlayerActionListT {
+  fn default() -> Self {
+    Self {
+      actions: None,
+    }
+  }
+}
+impl PlayerActionListT {
+  pub fn pack<'b>(
+    &self,
+    _fbb: &mut flatbuffers::FlatBufferBuilder<'b>
+  ) -> flatbuffers::WIPOffset<PlayerActionList<'b>> {
+    let actions = self.actions.as_ref().map(|x|{
+      let w: Vec<_> = x.iter().map(|t| t.pack(_fbb)).collect();_fbb.create_vector(&w)
+    });
+    PlayerActionList::create(_fbb, &PlayerActionListArgs{
+      actions,
+    })
+  }
+}
+#[inline]
+/// Verifies that a buffer of bytes contains a `PlayerActionList`
+/// and returns it.
+/// Note that verification is still experimental and may not
+/// catch every error, or be maximally performant. For the
+/// previous, unchecked, behavior use
+/// `root_as_player_action_list_unchecked`.
+pub fn root_as_player_action_list(buf: &[u8]) -> Result<PlayerActionList, flatbuffers::InvalidFlatbuffer> {
+  flatbuffers::root::<PlayerActionList>(buf)
+}
+#[inline]
+/// Verifies that a buffer of bytes contains a size prefixed
+/// `PlayerActionList` and returns it.
+/// Note that verification is still experimental and may not
+/// catch every error, or be maximally performant. For the
+/// previous, unchecked, behavior use
+/// `size_prefixed_root_as_player_action_list_unchecked`.
+pub fn size_prefixed_root_as_player_action_list(buf: &[u8]) -> Result<PlayerActionList, flatbuffers::InvalidFlatbuffer> {
+  flatbuffers::size_prefixed_root::<PlayerActionList>(buf)
+}
+#[inline]
+/// Verifies, with the given options, that a buffer of bytes
+/// contains a `PlayerActionList` and returns it.
+/// Note that verification is still experimental and may not
+/// catch every error, or be maximally performant. For the
+/// previous, unchecked, behavior use
+/// `root_as_player_action_list_unchecked`.
+pub fn root_as_player_action_list_with_opts<'b, 'o>(
+  opts: &'o flatbuffers::VerifierOptions,
+  buf: &'b [u8],
+) -> Result<PlayerActionList<'b>, flatbuffers::InvalidFlatbuffer> {
+  flatbuffers::root_with_opts::<PlayerActionList<'b>>(opts, buf)
+}
+#[inline]
+/// Verifies, with the given verifier options, that a buffer of
+/// bytes contains a size prefixed `PlayerActionList` and returns
+/// it. Note that verification is still experimental and may not
+/// catch every error, or be maximally performant. For the
+/// previous, unchecked, behavior use
+/// `root_as_player_action_list_unchecked`.
+pub fn size_prefixed_root_as_player_action_list_with_opts<'b, 'o>(
+  opts: &'o flatbuffers::VerifierOptions,
+  buf: &'b [u8],
+) -> Result<PlayerActionList<'b>, flatbuffers::InvalidFlatbuffer> {
+  flatbuffers::size_prefixed_root_with_opts::<PlayerActionList<'b>>(opts, buf)
+}
+#[inline]
+/// Assumes, without verification, that a buffer of bytes contains a PlayerActionList and returns it.
+/// # Safety
+/// Callers must trust the given bytes do indeed contain a valid `PlayerActionList`.
+pub unsafe fn root_as_player_action_list_unchecked(buf: &[u8]) -> PlayerActionList {
+  flatbuffers::root_unchecked::<PlayerActionList>(buf)
+}
+#[inline]
+/// Assumes, without verification, that a buffer of bytes contains a size prefixed PlayerActionList and returns it.
+/// # Safety
+/// Callers must trust the given bytes do indeed contain a valid size prefixed `PlayerActionList`.
+pub unsafe fn size_prefixed_root_as_player_action_list_unchecked(buf: &[u8]) -> PlayerActionList {
+  flatbuffers::size_prefixed_root_unchecked::<PlayerActionList>(buf)
+}
+#[inline]
+pub fn finish_player_action_list_buffer<'a, 'b>(
+    fbb: &'b mut flatbuffers::FlatBufferBuilder<'a>,
+    root: flatbuffers::WIPOffset<PlayerActionList<'a>>) {
+  fbb.finish(root, None);
+}
+
+#[inline]
+pub fn finish_size_prefixed_player_action_list_buffer<'a, 'b>(fbb: &'b mut flatbuffers::FlatBufferBuilder<'a>, root: flatbuffers::WIPOffset<PlayerActionList<'a>>) {
+  fbb.finish_size_prefixed(root, None);
+}
 }  // pub mod Client
 }  // pub mod Fastris
 

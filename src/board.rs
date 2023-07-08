@@ -378,12 +378,19 @@ pub struct Board {
     pub spawn_height: usize,
 }
 
-pub fn get_str_to_mino_type() -> HashMap<&'static str, MinoType> {
-    let mut str_to_mino_type = HashMap::<&str, MinoType>::new();
-    for mino_type in MinoType::ENUM_VALUES {
-        str_to_mino_type.insert(mino_type.variant_name().unwrap(), *mino_type);
+impl MinoType {
+    fn from(s: &str) -> MinoType {
+        match s {
+            "T" => MinoType::T,
+            "I" => MinoType::I,
+            "L" => MinoType::L,
+            "J" => MinoType::J,
+            "S" => MinoType::S,
+            "Z" => MinoType::Z,
+            "O" => MinoType::O,
+            _ => panic!("bad mino type string: {}", s),
+        }
     }
-    str_to_mino_type
 }
 
 impl Board {
@@ -395,6 +402,15 @@ impl Board {
             upcoming_minos: upcoming_minos,
             active_mino: None,
             hold: None,
+        }
+    }
+
+    pub fn add_upcoming_minos_from_str(&mut self, upcoming_minos: &str) {
+        for mino_type_char in upcoming_minos.chars() {
+            let mino_type_string = mino_type_char.to_string();
+            let mino_type_str: &str = &mino_type_string;
+            let mino_type = MinoType::from(mino_type_str);
+            self.upcoming_minos.push_back(mino_type);
         }
     }
 
@@ -413,7 +429,6 @@ impl Board {
             hold: None,
         };
 
-        let str_to_mino_type = get_str_to_mino_type();
         for (line_i, line) in lines.iter().enumerate() {
             let row_i = lines.len() - 1 - line_i;
             let segments = line.splitn(3, "|").collect::<Vec<&str>>();
@@ -432,7 +447,7 @@ impl Board {
                     board.spawn_height = row_i;
                 } else {
                     assert_eq!(board.hold, None); // must have at most 1 hold
-                    board.hold = Some(str_to_mino_type[hold_maybe]);
+                    board.hold = Some(MinoType::from(hold_maybe));
                 }
             } else {
                 assert_eq!(hold_maybe, "");
@@ -458,7 +473,7 @@ impl Board {
             if upcoming_maybe.len() == 1 {
                 board
                     .upcoming_minos
-                    .push_back(str_to_mino_type[upcoming_maybe]);
+                    .push_back(MinoType::from(upcoming_maybe));
             } else {
                 assert_eq!(upcoming_maybe, "")
             }
