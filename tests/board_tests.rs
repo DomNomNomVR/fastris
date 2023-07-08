@@ -1,18 +1,12 @@
 #[cfg(test)]
 mod tests {
     use fastris::board::*;
-    use fastris::client_generated::fastris::client::MinoType;
-    use fastris::client_generated::fastris::client::*;
     extern crate fastris;
 
     extern crate flatbuffers;
-    use core::num;
+
     use flatbuffers::FlatBufferBuilder;
-    use std::{
-        cmp::{max, min},
-        collections::{HashMap, VecDeque},
-        iter::zip,
-    };
+    use std::collections::VecDeque;
 
     fn split_two_board_ascii_art(two_board_ascii_art: &str) -> (String, String) {
         assert!(two_board_ascii_art.contains(">")); // delimiter between boards
@@ -172,7 +166,6 @@ mod tests {
     mod perfect_clear_openers {
         use core::panic;
         use std::collections::HashSet;
-        use std::fmt::format;
         use std::fs;
 
         use super::*;
@@ -235,8 +228,6 @@ mod tests {
                     let buf = bob.finished_data();
                     let action2 = flatbuffers::root::<PlayerAction>(buf).unwrap();
                     let mut child = parent.clone();
-                    let debug1 = format!("{}", parent);
-                    let debug2 = format!("{:?}", history);
                     match apply_action(&action2, &mut child) {
                         Ok(_) => {
                             if child.rows[0] == 0 {

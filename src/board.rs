@@ -1,7 +1,6 @@
-use core::num;
 use std::{
     cmp::{max, min},
-    collections::{HashMap, VecDeque},
+    collections::VecDeque,
     iter::zip,
 };
 
@@ -13,7 +12,6 @@ pub use crate::client_generated::fastris::client::*;
 
 // import the flatbuffers runtime library
 extern crate flatbuffers;
-use flatbuffers::FlatBufferBuilder;
 
 pub const BOARD_HEIGHT: usize = 1024;
 
@@ -768,16 +766,16 @@ fn apply_rotate<F: Fn(&Orientation) -> Orientation>(
 
     Ok(0)
 }
-fn apply_rotate_cw(a: &RotateCW, board: &mut Board) -> Result<u8, Penalty> {
+fn apply_rotate_cw(_a: &RotateCW, board: &mut Board) -> Result<u8, Penalty> {
     apply_rotate(Orientation::rotate_cw, board)
 }
-fn apply_rotate_ccw(a: &RotateCCW, board: &mut Board) -> Result<u8, Penalty> {
+fn apply_rotate_ccw(_a: &RotateCCW, board: &mut Board) -> Result<u8, Penalty> {
     apply_rotate(Orientation::rotate_ccw, board)
 }
-fn apply_rotate180(a: &Rotate180, board: &mut Board) -> Result<u8, Penalty> {
+fn apply_rotate180(_a: &Rotate180, board: &mut Board) -> Result<u8, Penalty> {
     apply_rotate(Orientation::rotate_180, board)
 }
-fn apply_hold(a: &Hold, board: &mut Board) -> Result<u8, Penalty> {
+fn apply_hold(_a: &Hold, board: &mut Board) -> Result<u8, Penalty> {
     let hold = match &board.active_mino {
         Some(mino) => Some(mino.mino_type),
         None => None,
@@ -799,7 +797,7 @@ fn test_intersection(mask: &MinoMask, board_rows: &[u16; BOARD_HEIGHT]) -> bool 
     }
     acc != 0
 }
-fn apply_hard_drop(a: &HardDrop, board: &mut Board) -> Result<u8, Penalty> {
+fn apply_hard_drop(_a: &HardDrop, board: &mut Board) -> Result<u8, Penalty> {
     if board.active_mino.is_none() {
         return Err(Penalty::new("Trying to hard drop without an active piece"));
     }
