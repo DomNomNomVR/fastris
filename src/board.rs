@@ -7,10 +7,8 @@ use std::{
 // import the generated code
 #[allow(dead_code, unused_imports)]
 #[allow(clippy::all)]
-//mod client_generated;
 pub use crate::client_generated::fastris::client::*;
 
-// import the flatbuffers runtime library
 extern crate flatbuffers;
 
 pub const BOARD_HEIGHT: usize = 1024;
