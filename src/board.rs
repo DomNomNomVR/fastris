@@ -372,6 +372,7 @@ pub struct Board {
     pub hold: Option<MinoType>,
     pub upcoming_minos: VecDeque<MinoType>,
     pub spawn_height: usize,
+    pub incoming_garbage_heights: Vec<u8>,
 }
 
 impl MinoType {
@@ -398,6 +399,7 @@ impl Board {
             upcoming_minos: upcoming_minos,
             active_mino: None,
             hold: None,
+            incoming_garbage_heights: Vec::new(),
         }
     }
 
@@ -416,14 +418,10 @@ impl Board {
             .map(|line| line.split("//").next().unwrap())
             .filter(|line| line.contains("|"))
             .collect::<Vec<_>>();
-        let mut board = Board {
-            rows: [0; BOARD_HEIGHT],
-            width: 0,
-            spawn_height: lines.len(),
-            upcoming_minos: VecDeque::<MinoType>::new(),
-            active_mino: None,
-            hold: None,
-        };
+
+        let mut board = Board::new(VecDeque::<MinoType>::new());
+        board.spawn_height = lines.len();
+        board.width = 0;
 
         for (line_i, line) in lines.iter().enumerate() {
             let row_i = lines.len() - 1 - line_i;
@@ -585,7 +583,10 @@ impl std::fmt::Display for Board {
 #[derive(Debug, PartialEq, Eq)]
 pub struct Penalty {
     pub reason: String,
-    pub significance: u16, // How bad the player should be punished for this. Units TBD.
+    // How bad the player should be punished for a recent action.
+    // Values >= 100 imply that you have lost this round.
+    // Other units TBD.
+    pub significance: u16,
 }
 
 impl Penalty {
