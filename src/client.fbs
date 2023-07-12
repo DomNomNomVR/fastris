@@ -37,4 +37,8 @@ table PlayerActionList {
   actions: [PlayerAction];
 }
 
-root_type PlayerActionList;
+table PlayerActionListResponse {
+  new_garbage_heights: [uint8];
+  new_garbage_holes: [int8];
+  new_upcoming_minos: [MinoType];
+}

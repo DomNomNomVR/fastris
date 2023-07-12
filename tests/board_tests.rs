@@ -244,8 +244,6 @@ mod tests {
                                 let packed = action_list.pack(&mut bob);
                                 bob.finish(packed, None);
                                 let buf = bob.finished_data();
-                                fastris::client_generated::fastris::client::root_as_player_action_list(buf)
-                                    .expect("unable to deserialize");
 
                                 fs::write(&solution_path, buf).expect("Unable to write file");
                                 found_solution = true;

@@ -7,6 +7,7 @@ use crate::{
     board::{self, *},
     connection::Connection,
 };
+use flatbuffers::FlatBufferBuilder;
 use rand::distributions::{Distribution, Uniform};
 use rand::prelude::*;
 use rand_chacha::ChaCha8Rng;
@@ -98,6 +99,7 @@ impl Versus {
         println!("Accepted client {}", board_i);
 
         let mut connection = Connection::new(socket);
+        let mut bob = FlatBufferBuilder::with_capacity(1000);
         while let Some((start, end)) = connection.read_frame().await.unwrap() {
             let buf = &connection.buffer[start..end];
             let action_list =
@@ -108,11 +110,36 @@ impl Versus {
                 for action in action_list.actions().unwrap() {
                     versus.apply_action(&action, board_i);
                 }
+
+                // optimization TODO: at this point we only need to lock the unsent queues.
+                versus.build_response(&mut bob, board_i);
             }
+            // connection.write_frame(bob.finished_data());
         }
     }
 
-    // pub fn build_response()
+    pub fn build_response(&mut self, bob: &mut FlatBufferBuilder, board_i: usize) {
+        bob.reset();
+        // TODO: optimzation: make unsent_ stuff a vector and see whether creave_vector(&[]) is faster
+        let new_garbage_heights =
+            Some(bob.create_vector_from_iter(self.unsent_garbage_heights[board_i].iter()));
+        let new_garbage_holes =
+            Some(bob.create_vector_from_iter(self.unsent_garbage_holes[board_i].iter()));
+        let new_upcoming_minos =
+            Some(bob.create_vector_from_iter(self.unsent_upcoming_minos[board_i].iter()));
+        self.unsent_garbage_heights[board_i].clear();
+        self.unsent_garbage_holes[board_i].clear();
+        self.unsent_upcoming_minos[board_i].clear();
+        let res = PlayerActionListResponse::create(
+            bob,
+            &PlayerActionListResponseArgs {
+                new_garbage_heights,
+                new_garbage_holes,
+                new_upcoming_minos,
+            },
+        );
+        bob.finish(res, None);
+    }
 
     pub fn apply_action(&mut self, action: &PlayerAction<'_>, board_i: usize) {
         let result = apply_action(&action, &mut self.boards[board_i]);

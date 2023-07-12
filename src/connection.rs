@@ -28,6 +28,7 @@ impl Connection {
             buffer: BytesMut::with_capacity(4 * 1024),
         }
     }
+
     pub async fn read_frame(
         &mut self,
     ) -> Result<Option<(usize, usize)>, Box<dyn std::error::Error>> {
