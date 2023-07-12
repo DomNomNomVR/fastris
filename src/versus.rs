@@ -190,6 +190,8 @@ impl Versus {
             let mino = {
                 if self.unused_upcoming_minos[board_i].is_empty() {
                     self.mino_bag.shuffle(&mut self.mino_rng);
+                    // Optimization idea: we could have only one Deque but multiple cursors into it
+                    // and we only drop things once all cursors have gone past an item.
                     for unused in self.unused_upcoming_minos.iter_mut() {
                         unused.extend(self.mino_bag.iter());
                     }
