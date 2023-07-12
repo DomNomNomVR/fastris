@@ -372,7 +372,6 @@ pub struct Board {
     pub hold: Option<MinoType>,
     pub upcoming_minos: VecDeque<MinoType>,
     pub spawn_height: usize,
-    pub incoming_garbage_heights: Vec<u8>,
 }
 
 impl MinoType {
@@ -399,8 +398,10 @@ impl Board {
             upcoming_minos: upcoming_minos,
             active_mino: None,
             hold: None,
-            incoming_garbage_heights: Vec::new(),
         }
+    }
+    pub fn full_row(width: i8) -> u16 {
+        u16::MAX >> (16 - width)
     }
 
     pub fn add_upcoming_minos_from_str(&mut self, upcoming_minos: &str) {
@@ -818,11 +819,6 @@ fn apply_hard_drop(_a: &HardDrop, board: &mut Board) -> Result<u8, Penalty> {
     }
 
     // Scan for clears
-    // Optimization TODO: The `full_row` value could be cached in the board.
-    fn setbits(x: i8) -> u16 {
-        u16::MAX >> (16 - x)
-    }
-    let full_row = setbits(board.width);
     let mut num_cleared = 0usize;
     for write_i in mask.bottom_row..BOARD_HEIGHT {
         if board.rows[write_i] == 0 {
@@ -832,7 +828,7 @@ fn apply_hard_drop(_a: &HardDrop, board: &mut Board) -> Result<u8, Penalty> {
             // Thus it is impossible to create an empty row with blocks above it QED
             break;
         }
-        while board.rows[write_i + num_cleared] == full_row {
+        while board.rows[write_i + num_cleared] == Board::full_row(board.width) {
             num_cleared += 1;
         }
         board.rows[write_i] = board.rows[write_i + num_cleared];

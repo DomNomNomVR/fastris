@@ -3,7 +3,10 @@ use std::{
     thread::{self, JoinHandle},
 };
 
-use crate::{board::*, connection::Connection};
+use crate::{
+    board::{self, *},
+    connection::Connection,
+};
 use rand::distributions::{Distribution, Uniform};
 use rand::prelude::*;
 use rand_chacha::ChaCha8Rng;
@@ -13,10 +16,16 @@ use std::sync::{Arc, Mutex};
 use tokio::net::{TcpListener, TcpStream};
 
 pub struct Versus {
-    pub boards: Vec<Board>,
-    pub mino_bag: Vec<MinoType>,
     pub mino_rng: XorShiftRng,
     pub garbage_rng: XorShiftRng,
+    pub mino_bag: Vec<MinoType>,
+
+    // Each of these outer Vec's is per-player.
+    pub boards: Vec<Board>,
+    pub unused_garbage_heights: Vec<VecDeque<u8>>,
+    pub unsent_garbage_heights: Vec<VecDeque<u8>>,
+    pub unused_garbage_holes: Vec<VecDeque<i8>>,
+    pub unsent_garbage_holes: Vec<VecDeque<i8>>,
 }
 
 impl Versus {
@@ -31,12 +40,16 @@ impl Versus {
         mino_bag.shuffle(&mut mino_rng);
 
         Versus {
+            mino_rng,
+            garbage_rng,
             boards: (0..num_players)
                 .map(|_| Board::new(VecDeque::from(mino_bag.clone())))
                 .collect(),
             mino_bag,
-            mino_rng,
-            garbage_rng,
+            unused_garbage_heights: (0..num_players).map(|_| VecDeque::new()).collect(),
+            unsent_garbage_heights: (0..num_players).map(|_| VecDeque::new()).collect(),
+            unused_garbage_holes: (0..num_players).map(|_| VecDeque::new()).collect(),
+            unsent_garbage_holes: (0..num_players).map(|_| VecDeque::new()).collect(),
         }
     }
 
@@ -66,7 +79,6 @@ impl Versus {
             // Clone the handle but not the inner value.
             let versus = versus.clone();
 
-            println!("Accepted");
             tokio::spawn(async move {
                 Self::handle_client_messages(socket, i, versus).await;
             });
@@ -78,40 +90,86 @@ impl Versus {
         }
     }
 
-    async fn handle_client_messages(
-        socket: TcpStream,
-        board_index: usize,
-        versus: Arc<Mutex<Versus>>,
-    ) {
+    async fn handle_client_messages(socket: TcpStream, board_i: usize, versus: Arc<Mutex<Versus>>) {
+        println!("Accepted client {}", board_i);
+
         let mut connection = Connection::new(socket);
         while let Some((start, end)) = connection.read_frame().await.unwrap() {
-            
             let buf = &connection.buffer[start..end];
             let action_list =
                 flatbuffers::root::<PlayerActionList>(buf).expect("unable to deserialize");
             let mut versus = versus.lock().unwrap();
             for action in action_list.actions().unwrap() {
-                let result = apply_action(&action, &mut versus.boards[board_index]);
-                match result {
-                    Ok(lines_sent) => {
-                        assert_eq!(
-                            versus.boards.len(),
-                            2,
-                            "Target selection for multiple players not yet implemented"
-                        );
-                        let target_board = versus.boards.len() - board_index;
-                        versus.boards[target_board]
-                            .incoming_garbage_heights
-                            .push(lines_sent);
-                    }
-                    Err(penalty) => {
+                versus.apply_action(&action, board_i);
+            }
+        }
+    }
 
-                        if penalty.significance >= 100 {
-                            return; // This player has lost.
-                        }
+    pub fn apply_action(&mut self, action: &PlayerAction<'_>, board_i: usize) {
+        let result = apply_action(&action, &mut self.boards[board_i]);
+        match result {
+            Ok(lines_sent) => {
+                assert_eq!(
+                    self.boards.len(),
+                    2,
+                    "Target selection for multiple players not yet implemented"
+                );
+                let target_board = self.boards.len() - board_i;
+                self.unused_garbage_heights[target_board].push_back(lines_sent);
+                self.unsent_garbage_heights[target_board].push_back(lines_sent);
+
+                // push garbage into board after hard drop happens.
+                match action.action_type() {
+                    HardDrop => {
+                        self.apply_garbage_push(board_i);
                     }
+                    _ => {}
+                };
+            }
+            Err(penalty) => {
+                if penalty.significance >= 100 {
+                    return; // This player has lost.
                 }
             }
         }
+    }
+
+    pub fn apply_garbage_push(&mut self, board_i: usize) {
+        let total_height: usize = self.unused_garbage_heights[board_i]
+            .iter()
+            .map(|x| *x as usize)
+            .sum();
+        // TODO: optimization - maybe make board.rows a VecDeque<u16>
+        // shift up, then add bottom rows
+        let width = self.boards[board_i].width;
+        let row_count = self.boards[board_i].rows.len();
+        let rows = &mut self.boards[board_i].rows;
+        for i in (0..row_count - total_height).rev() {
+            rows[i + total_height] = rows[i];
+        }
+
+        // write new rows top to bottom
+        let mut write_row = total_height;
+        for &height in self.unused_garbage_heights[board_i].iter() {
+            let garbage_hole = {
+                if self.unused_garbage_holes[board_i].is_empty() {
+                    // The RNG is shared between all participants.
+                    let hole = self.garbage_rng.gen_range(0..width);
+                    for i in 0..self.unused_garbage_holes.len() {
+                        self.unused_garbage_holes[i].push_back(hole);
+                        self.unsent_garbage_holes[i].push_back(hole);
+                    }
+                }
+                self.unused_garbage_holes[board_i]
+                    .pop_front()
+                    .expect("garbage hole location should've been filled by the above if statement")
+            };
+            let row = Board::full_row(width) ^ (1 << garbage_hole);
+            for _ in 0..height {
+                write_row -= 1;
+                rows[write_row] = row;
+            }
+        }
+        assert_eq!(write_row, 0);
     }
 }
