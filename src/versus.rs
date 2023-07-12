@@ -26,6 +26,8 @@ pub struct Versus {
     pub unsent_garbage_heights: Vec<VecDeque<u8>>,
     pub unused_garbage_holes: Vec<VecDeque<i8>>,
     pub unsent_garbage_holes: Vec<VecDeque<i8>>,
+    pub unused_upcoming_minos: Vec<VecDeque<MinoType>>,
+    pub unsent_upcoming_minos: Vec<VecDeque<MinoType>>,
 }
 
 impl Versus {
@@ -50,6 +52,8 @@ impl Versus {
             unsent_garbage_heights: (0..num_players).map(|_| VecDeque::new()).collect(),
             unused_garbage_holes: (0..num_players).map(|_| VecDeque::new()).collect(),
             unsent_garbage_holes: (0..num_players).map(|_| VecDeque::new()).collect(),
+            unused_upcoming_minos: (0..num_players).map(|_| VecDeque::new()).collect(),
+            unsent_upcoming_minos: (0..num_players).map(|_| VecDeque::new()).collect(),
         }
     }
 
@@ -98,12 +102,17 @@ impl Versus {
             let buf = &connection.buffer[start..end];
             let action_list =
                 flatbuffers::root::<PlayerActionList>(buf).expect("unable to deserialize");
-            let mut versus = versus.lock().unwrap();
-            for action in action_list.actions().unwrap() {
-                versus.apply_action(&action, board_i);
+            {
+                // This scope exists for locking versus for the minimal amount of
+                let mut versus = versus.lock().unwrap();
+                for action in action_list.actions().unwrap() {
+                    versus.apply_action(&action, board_i);
+                }
             }
         }
     }
+
+    // pub fn build_response()
 
     pub fn apply_action(&mut self, action: &PlayerAction<'_>, board_i: usize) {
         let result = apply_action(&action, &mut self.boards[board_i]);
@@ -122,6 +131,7 @@ impl Versus {
                 match action.action_type() {
                     HardDrop => {
                         self.apply_garbage_push(board_i);
+                        self.fill_upcoming_minos(board_i);
                     }
                     _ => {}
                 };
@@ -171,5 +181,25 @@ impl Versus {
             }
         }
         assert_eq!(write_row, 0);
+    }
+
+    fn fill_upcoming_minos(&mut self, board_i: usize) {
+        let min_queued_minos = 5; // this could be exposed / customized.
+        while self.boards[board_i].upcoming_minos.len() < min_queued_minos {
+            // this should never loop more than once but better safe than sorry
+            let mino = {
+                if self.unused_upcoming_minos[board_i].is_empty() {
+                    self.mino_bag.shuffle(&mut self.mino_rng);
+                    for unused in self.unused_upcoming_minos.iter_mut() {
+                        unused.extend(self.mino_bag.iter());
+                    }
+                }
+                self.unused_upcoming_minos[board_i]
+                    .pop_front()
+                    .expect("should've been filled in the if-statement above.")
+            };
+            self.boards[board_i].upcoming_minos.push_back(mino);
+            self.unsent_upcoming_minos[board_i].push_back(mino);
+        }
     }
 }
