@@ -100,21 +100,33 @@ impl Versus {
 
         let mut connection = Connection::new(socket);
         let mut bob = FlatBufferBuilder::with_capacity(1000);
-        while let Some((start, end)) = connection.read_frame().await.unwrap() {
-            let buf = &connection.buffer[start..end];
-            let action_list =
-                flatbuffers::root::<PlayerActionList>(buf).expect("unable to deserialize");
-            {
-                // This scope exists for locking versus for the minimal amount of
-                let mut versus = versus.lock().unwrap();
-                for action in action_list.actions().unwrap() {
-                    versus.apply_action(&action, board_i);
-                }
+        loop {
+            if let Some((start, end)) = connection.read_frame().await.unwrap() {
+                let buf = &connection.buffer[start..end];
+                let action_list =
+                    flatbuffers::root::<PlayerActionList>(buf).expect("unable to deserialize");
+                {
+                    // This scope exists for locking versus for the minimal amount of
+                    let mut versus = versus.lock().unwrap();
+                    for action in action_list.actions().unwrap() {
+                        versus.apply_action(&action, board_i);
+                    }
 
-                // optimization TODO: at this point we only need to lock the unsent queues.
-                versus.build_response(&mut bob, board_i);
+                    // optimization TODO: at this point we only need to lock the unsent queues.
+                    versus.build_response(&mut bob, board_i);
+                }
+            } else {
+                print!("ending client {} due to empty message", board_i);
+                break;
             }
-            // connection.write_frame(bob.finished_data());
+
+            match connection.write_frame(bob.finished_data()).await {
+                Ok(()) => {}
+                Err(e) => {
+                    print!("ending client {} due to write error: {}", board_i, e);
+                    break;
+                }
+            };
         }
     }
 

@@ -1,6 +1,9 @@
 use bytes::{Buf, BytesMut};
 use std::io::Cursor;
-use tokio::{io::BufWriter, net::TcpStream};
+use tokio::{
+    io::{AsyncWriteExt, BufWriter},
+    net::TcpStream,
+};
 
 use tokio_util::io::{read_buf, StreamReader};
 
@@ -27,6 +30,13 @@ impl Connection {
             // a larger read buffer will work better.
             buffer: BytesMut::with_capacity(4 * 1024),
         }
+    }
+
+    pub async fn write_frame(&mut self, content: &[u8]) -> Result<(), Box<dyn std::error::Error>> {
+        assert!(content.len() <= u16::MAX as usize);
+        self.stream.write_u16(content.len() as u16).await?;
+        self.stream.write(content).await?;
+        Ok(())
     }
 
     pub async fn read_frame(
