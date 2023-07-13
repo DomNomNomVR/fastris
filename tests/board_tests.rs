@@ -836,7 +836,8 @@ mod tests {
 
     #[test]
     fn test_apply_soft_drop_with_serialization() {
-        let mut b = Board::new(VecDeque::from([MinoType::T]));
+        let mut b = Board::new();
+        b.upcoming_minos.push_back(MinoType::T);
         let mut bob = FlatBufferBuilder::with_capacity(1000);
         let drop = SoftDrop::create(&mut bob, &SoftDropArgs { repeats: 3 });
         let action = PlayerAction::create(

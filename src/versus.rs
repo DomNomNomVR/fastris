@@ -3,10 +3,7 @@ use std::{
     thread::{self, JoinHandle},
 };
 
-use crate::{
-    board::{self, *},
-    connection::Connection,
-};
+use crate::{board::*, connection::Connection};
 use flatbuffers::FlatBufferBuilder;
 use rand::distributions::{Distribution, Uniform};
 use rand::prelude::*;
@@ -32,7 +29,7 @@ pub struct Versus {
 }
 
 impl Versus {
-    fn new(num_players: usize, mut master_seed: ChaCha8Rng) -> Versus {
+    pub fn new(num_players: usize, mut master_seed: ChaCha8Rng) -> Versus {
         let seed_range = Uniform::new(0, u64::MAX);
         let mut mino_rng = XorShiftRng::seed_from_u64(seed_range.sample(&mut master_seed));
         let garbage_rng = XorShiftRng::seed_from_u64(seed_range.sample(&mut master_seed));
@@ -45,16 +42,18 @@ impl Versus {
         Versus {
             mino_rng,
             garbage_rng,
-            boards: (0..num_players)
-                .map(|_| Board::new(VecDeque::from(mino_bag.clone())))
-                .collect(),
-            mino_bag,
+            boards: (0..num_players).map(|_| Board::new()).collect(),
             unused_garbage_heights: (0..num_players).map(|_| VecDeque::new()).collect(),
             unsent_garbage_heights: (0..num_players).map(|_| VecDeque::new()).collect(),
             unused_garbage_holes: (0..num_players).map(|_| VecDeque::new()).collect(),
             unsent_garbage_holes: (0..num_players).map(|_| VecDeque::new()).collect(),
-            unused_upcoming_minos: (0..num_players).map(|_| VecDeque::new()).collect(),
-            unsent_upcoming_minos: (0..num_players).map(|_| VecDeque::new()).collect(),
+            unused_upcoming_minos: (0..num_players)
+                .map(|_| VecDeque::from(mino_bag.clone()))
+                .collect(),
+            unsent_upcoming_minos: (0..num_players)
+                .map(|_| VecDeque::from(mino_bag.clone()))
+                .collect(),
+            mino_bag,
         }
     }
 
