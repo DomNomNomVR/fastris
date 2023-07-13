@@ -390,12 +390,12 @@ impl MinoType {
 }
 
 impl Board {
-    pub fn new(upcoming_minos: VecDeque<MinoType>) -> Board {
+    pub fn new() -> Board {
         Board {
             rows: [0; BOARD_HEIGHT],
             width: 8,
             spawn_height: 20,
-            upcoming_minos: upcoming_minos,
+            upcoming_minos: VecDeque::new(),
             active_mino: None,
             hold: None,
         }
@@ -420,7 +420,7 @@ impl Board {
             .filter(|line| line.contains("|"))
             .collect::<Vec<_>>();
 
-        let mut board = Board::new(VecDeque::<MinoType>::new());
+        let mut board = Board::new();
         board.spawn_height = lines.len();
         board.width = 0;
 

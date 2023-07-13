@@ -57,7 +57,7 @@ impl Versus {
         }
     }
 
-    async fn run_match(
+    pub async fn run_match(
         server_address: &str,
         client_spawner: Vec<fn(&str) -> thread::JoinHandle<()>>,
         master_seed: ChaCha8Rng,
@@ -167,7 +167,7 @@ impl Versus {
 
                 // push garbage into board after hard drop happens.
                 match action.action_type() {
-                    HardDrop => {
+                    PlayerActions::HardDrop => {
                         self.apply_garbage_push(board_i);
                         self.fill_upcoming_minos(board_i);
                     }

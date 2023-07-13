@@ -5,7 +5,7 @@ use tokio::{
     net::TcpStream,
 };
 
-use tokio_util::io::{read_buf, StreamReader};
+use tokio_util::io::read_buf;
 
 #[derive(Debug)]
 pub struct Connection {
