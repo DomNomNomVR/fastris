@@ -17,9 +17,3 @@
 fn main() {
     println!("hi");
 }
-
-// #[cfg(test)]
-// #[test]
-// fn test_main() {
-//     main()
-// }

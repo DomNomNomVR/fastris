@@ -36,6 +36,7 @@ impl Connection {
         assert!(content.len() <= u16::MAX as usize);
         self.stream.write_u16(content.len() as u16).await?;
         self.stream.write(content).await?;
+        self.stream.flush().await?;
         Ok(())
     }
 
@@ -49,7 +50,8 @@ impl Connection {
                 if self.buffer.remaining() > 2 {
                     frame_length = self.buffer.get_u16() as usize;
                 }
-            } else if self.buffer.remaining() >= frame_length {
+            }
+            if frame_length > 0 && self.buffer.remaining() >= frame_length {
                 // return slice indecies to body
                 let buf = Cursor::new(&self.buffer[..]);
                 let start = buf.position() as usize;

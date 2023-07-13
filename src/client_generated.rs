@@ -1713,47 +1713,47 @@ impl PlayerActionListT {
     })
   }
 }
-pub enum PlayerActionListResponseOffset {}
+pub enum BoardExternalInfluenceOffset {}
 #[derive(Copy, Clone, PartialEq)]
 
-pub struct PlayerActionListResponse<'a> {
+pub struct BoardExternalInfluence<'a> {
   pub _tab: flatbuffers::Table<'a>,
 }
 
-impl<'a> flatbuffers::Follow<'a> for PlayerActionListResponse<'a> {
-  type Inner = PlayerActionListResponse<'a>;
+impl<'a> flatbuffers::Follow<'a> for BoardExternalInfluence<'a> {
+  type Inner = BoardExternalInfluence<'a>;
   #[inline]
   unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
     Self { _tab: flatbuffers::Table::new(buf, loc) }
   }
 }
 
-impl<'a> PlayerActionListResponse<'a> {
+impl<'a> BoardExternalInfluence<'a> {
   pub const VT_NEW_GARBAGE_HEIGHTS: flatbuffers::VOffsetT = 4;
   pub const VT_NEW_GARBAGE_HOLES: flatbuffers::VOffsetT = 6;
   pub const VT_NEW_UPCOMING_MINOS: flatbuffers::VOffsetT = 8;
 
   pub const fn get_fully_qualified_name() -> &'static str {
-    "Fastris.Client.PlayerActionListResponse"
+    "Fastris.Client.BoardExternalInfluence"
   }
 
   #[inline]
   pub unsafe fn init_from_table(table: flatbuffers::Table<'a>) -> Self {
-    PlayerActionListResponse { _tab: table }
+    BoardExternalInfluence { _tab: table }
   }
   #[allow(unused_mut)]
   pub fn create<'bldr: 'args, 'args: 'mut_bldr, 'mut_bldr>(
     _fbb: &'mut_bldr mut flatbuffers::FlatBufferBuilder<'bldr>,
-    args: &'args PlayerActionListResponseArgs<'args>
-  ) -> flatbuffers::WIPOffset<PlayerActionListResponse<'bldr>> {
-    let mut builder = PlayerActionListResponseBuilder::new(_fbb);
+    args: &'args BoardExternalInfluenceArgs<'args>
+  ) -> flatbuffers::WIPOffset<BoardExternalInfluence<'bldr>> {
+    let mut builder = BoardExternalInfluenceBuilder::new(_fbb);
     if let Some(x) = args.new_upcoming_minos { builder.add_new_upcoming_minos(x); }
     if let Some(x) = args.new_garbage_holes { builder.add_new_garbage_holes(x); }
     if let Some(x) = args.new_garbage_heights { builder.add_new_garbage_heights(x); }
     builder.finish()
   }
 
-  pub fn unpack(&self) -> PlayerActionListResponseT {
+  pub fn unpack(&self) -> BoardExternalInfluenceT {
     let new_garbage_heights = self.new_garbage_heights().map(|x| {
       x.into_iter().collect()
     });
@@ -1763,7 +1763,7 @@ impl<'a> PlayerActionListResponse<'a> {
     let new_upcoming_minos = self.new_upcoming_minos().map(|x| {
       x.into_iter().collect()
     });
-    PlayerActionListResponseT {
+    BoardExternalInfluenceT {
       new_garbage_heights,
       new_garbage_holes,
       new_upcoming_minos,
@@ -1775,25 +1775,25 @@ impl<'a> PlayerActionListResponse<'a> {
     // Safety:
     // Created from valid Table for this object
     // which contains a valid value in this slot
-    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'a, u8>>>(PlayerActionListResponse::VT_NEW_GARBAGE_HEIGHTS, None)}
+    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'a, u8>>>(BoardExternalInfluence::VT_NEW_GARBAGE_HEIGHTS, None)}
   }
   #[inline]
   pub fn new_garbage_holes(&self) -> Option<flatbuffers::Vector<'a, i8>> {
     // Safety:
     // Created from valid Table for this object
     // which contains a valid value in this slot
-    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'a, i8>>>(PlayerActionListResponse::VT_NEW_GARBAGE_HOLES, None)}
+    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'a, i8>>>(BoardExternalInfluence::VT_NEW_GARBAGE_HOLES, None)}
   }
   #[inline]
   pub fn new_upcoming_minos(&self) -> Option<flatbuffers::Vector<'a, MinoType>> {
     // Safety:
     // Created from valid Table for this object
     // which contains a valid value in this slot
-    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'a, MinoType>>>(PlayerActionListResponse::VT_NEW_UPCOMING_MINOS, None)}
+    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'a, MinoType>>>(BoardExternalInfluence::VT_NEW_UPCOMING_MINOS, None)}
   }
 }
 
-impl flatbuffers::Verifiable for PlayerActionListResponse<'_> {
+impl flatbuffers::Verifiable for BoardExternalInfluence<'_> {
   #[inline]
   fn run_verifier(
     v: &mut flatbuffers::Verifier, pos: usize
@@ -1807,15 +1807,15 @@ impl flatbuffers::Verifiable for PlayerActionListResponse<'_> {
     Ok(())
   }
 }
-pub struct PlayerActionListResponseArgs<'a> {
+pub struct BoardExternalInfluenceArgs<'a> {
     pub new_garbage_heights: Option<flatbuffers::WIPOffset<flatbuffers::Vector<'a, u8>>>,
     pub new_garbage_holes: Option<flatbuffers::WIPOffset<flatbuffers::Vector<'a, i8>>>,
     pub new_upcoming_minos: Option<flatbuffers::WIPOffset<flatbuffers::Vector<'a, MinoType>>>,
 }
-impl<'a> Default for PlayerActionListResponseArgs<'a> {
+impl<'a> Default for BoardExternalInfluenceArgs<'a> {
   #[inline]
   fn default() -> Self {
-    PlayerActionListResponseArgs {
+    BoardExternalInfluenceArgs {
       new_garbage_heights: None,
       new_garbage_holes: None,
       new_upcoming_minos: None,
@@ -1823,41 +1823,41 @@ impl<'a> Default for PlayerActionListResponseArgs<'a> {
   }
 }
 
-pub struct PlayerActionListResponseBuilder<'a: 'b, 'b> {
+pub struct BoardExternalInfluenceBuilder<'a: 'b, 'b> {
   fbb_: &'b mut flatbuffers::FlatBufferBuilder<'a>,
   start_: flatbuffers::WIPOffset<flatbuffers::TableUnfinishedWIPOffset>,
 }
-impl<'a: 'b, 'b> PlayerActionListResponseBuilder<'a, 'b> {
+impl<'a: 'b, 'b> BoardExternalInfluenceBuilder<'a, 'b> {
   #[inline]
   pub fn add_new_garbage_heights(&mut self, new_garbage_heights: flatbuffers::WIPOffset<flatbuffers::Vector<'b , u8>>) {
-    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(PlayerActionListResponse::VT_NEW_GARBAGE_HEIGHTS, new_garbage_heights);
+    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(BoardExternalInfluence::VT_NEW_GARBAGE_HEIGHTS, new_garbage_heights);
   }
   #[inline]
   pub fn add_new_garbage_holes(&mut self, new_garbage_holes: flatbuffers::WIPOffset<flatbuffers::Vector<'b , i8>>) {
-    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(PlayerActionListResponse::VT_NEW_GARBAGE_HOLES, new_garbage_holes);
+    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(BoardExternalInfluence::VT_NEW_GARBAGE_HOLES, new_garbage_holes);
   }
   #[inline]
   pub fn add_new_upcoming_minos(&mut self, new_upcoming_minos: flatbuffers::WIPOffset<flatbuffers::Vector<'b , MinoType>>) {
-    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(PlayerActionListResponse::VT_NEW_UPCOMING_MINOS, new_upcoming_minos);
+    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(BoardExternalInfluence::VT_NEW_UPCOMING_MINOS, new_upcoming_minos);
   }
   #[inline]
-  pub fn new(_fbb: &'b mut flatbuffers::FlatBufferBuilder<'a>) -> PlayerActionListResponseBuilder<'a, 'b> {
+  pub fn new(_fbb: &'b mut flatbuffers::FlatBufferBuilder<'a>) -> BoardExternalInfluenceBuilder<'a, 'b> {
     let start = _fbb.start_table();
-    PlayerActionListResponseBuilder {
+    BoardExternalInfluenceBuilder {
       fbb_: _fbb,
       start_: start,
     }
   }
   #[inline]
-  pub fn finish(self) -> flatbuffers::WIPOffset<PlayerActionListResponse<'a>> {
+  pub fn finish(self) -> flatbuffers::WIPOffset<BoardExternalInfluence<'a>> {
     let o = self.fbb_.end_table(self.start_);
     flatbuffers::WIPOffset::new(o.value())
   }
 }
 
-impl core::fmt::Debug for PlayerActionListResponse<'_> {
+impl core::fmt::Debug for BoardExternalInfluence<'_> {
   fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-    let mut ds = f.debug_struct("PlayerActionListResponse");
+    let mut ds = f.debug_struct("BoardExternalInfluence");
       ds.field("new_garbage_heights", &self.new_garbage_heights());
       ds.field("new_garbage_holes", &self.new_garbage_holes());
       ds.field("new_upcoming_minos", &self.new_upcoming_minos());
@@ -1866,12 +1866,12 @@ impl core::fmt::Debug for PlayerActionListResponse<'_> {
 }
 #[non_exhaustive]
 #[derive(Debug, Clone, PartialEq)]
-pub struct PlayerActionListResponseT {
+pub struct BoardExternalInfluenceT {
   pub new_garbage_heights: Option<Vec<u8>>,
   pub new_garbage_holes: Option<Vec<i8>>,
   pub new_upcoming_minos: Option<Vec<MinoType>>,
 }
-impl Default for PlayerActionListResponseT {
+impl Default for BoardExternalInfluenceT {
   fn default() -> Self {
     Self {
       new_garbage_heights: None,
@@ -1880,11 +1880,11 @@ impl Default for PlayerActionListResponseT {
     }
   }
 }
-impl PlayerActionListResponseT {
+impl BoardExternalInfluenceT {
   pub fn pack<'b>(
     &self,
     _fbb: &mut flatbuffers::FlatBufferBuilder<'b>
-  ) -> flatbuffers::WIPOffset<PlayerActionListResponse<'b>> {
+  ) -> flatbuffers::WIPOffset<BoardExternalInfluence<'b>> {
     let new_garbage_heights = self.new_garbage_heights.as_ref().map(|x|{
       _fbb.create_vector(x)
     });
@@ -1894,7 +1894,7 @@ impl PlayerActionListResponseT {
     let new_upcoming_minos = self.new_upcoming_minos.as_ref().map(|x|{
       _fbb.create_vector(x)
     });
-    PlayerActionListResponse::create(_fbb, &PlayerActionListResponseArgs{
+    BoardExternalInfluence::create(_fbb, &BoardExternalInfluenceArgs{
       new_garbage_heights,
       new_garbage_holes,
       new_upcoming_minos,

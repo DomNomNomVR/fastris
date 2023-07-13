@@ -37,7 +37,7 @@ table PlayerActionList {
   actions: [PlayerAction];
 }
 
-table PlayerActionListResponse {
+table BoardExternalInfluence {
   new_garbage_heights: [uint8];
   new_garbage_holes: [int8];
   new_upcoming_minos: [MinoType];

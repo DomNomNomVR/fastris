@@ -1,7 +1,4 @@
-use std::{
-    collections::VecDeque,
-    thread::{self, JoinHandle},
-};
+use std::collections::VecDeque;
 
 use crate::{board::*, connection::Connection};
 use flatbuffers::FlatBufferBuilder;
@@ -11,7 +8,10 @@ use rand_chacha::ChaCha8Rng;
 use rand_xorshift::XorShiftRng;
 use std::sync::{Arc, Mutex};
 
-use tokio::net::{TcpListener, TcpStream};
+use tokio::{
+    net::{TcpListener, TcpStream},
+    sync::Barrier,
+};
 
 pub struct Versus {
     pub mino_rng: XorShiftRng,
@@ -59,14 +59,14 @@ impl Versus {
 
     pub async fn run_match(
         server_address: &str,
-        client_spawner: Vec<fn(&str) -> thread::JoinHandle<()>>,
+        client_spawner: Vec<fn(&str) -> tokio::task::JoinHandle<()>>,
         master_seed: ChaCha8Rng,
     ) {
         // open the port
         let listener = TcpListener::bind(server_address).await.unwrap();
 
         // start clients
-        let child_join_handles: Vec<JoinHandle<()>> = client_spawner
+        let child_join_handles: Vec<tokio::task::JoinHandle<()>> = client_spawner
             .into_iter()
             .map(|func| func(server_address))
             .collect();
@@ -76,29 +76,56 @@ impl Versus {
             child_join_handles.len(),
             master_seed,
         )));
+        let all_ready = Arc::new(Barrier::new(child_join_handles.len()));
 
         // start listening to clients
-        for i in 0..child_join_handles.len() {
+        for board_i in 0..child_join_handles.len() {
             let (socket, _) = listener.accept().await.expect("client did not connect");
+            println!("Accepted client {}", board_i);
             // Clone the handle but not the inner value.
             let versus = versus.clone();
+            let all_ready = all_ready.clone();
 
             tokio::spawn(async move {
-                Self::handle_client_messages(socket, i, versus).await;
+                Self::handle_client_messages(socket, board_i, versus, all_ready).await;
             });
         }
 
         // end clients
         for join_handle in child_join_handles {
-            let _ = join_handle.join();
+            // let _ = join_handle.join();
+            let _ = join_handle.await;
         }
     }
 
-    async fn handle_client_messages(socket: TcpStream, board_i: usize, versus: Arc<Mutex<Versus>>) {
-        println!("Accepted client {}", board_i);
-
+    async fn handle_client_messages(
+        socket: TcpStream,
+        board_i: usize,
+        versus: Arc<Mutex<Versus>>,
+        all_ready: Arc<Barrier>,
+    ) {
         let mut connection = Connection::new(socket);
         let mut bob = FlatBufferBuilder::with_capacity(1000);
+
+        // Set up the boards and queues
+        {
+            let mut versus = versus.lock().unwrap();
+            versus.apply_garbage_push(board_i);
+            versus.fill_upcoming_minos(board_i);
+            versus.build_response(&mut bob, board_i);
+        }
+        // Wait before sending the initial data to the client until all clients are ready.
+        let _ = all_ready.wait().await;
+        println!("Starting pistol fired for client {}", board_i);
+        match connection.write_frame(bob.finished_data()).await {
+            Ok(()) => {}
+            Err(e) => {
+                print!("ending client {} due to write error: {}", board_i, e);
+                return;
+            }
+        };
+        println!("sent initial packet to client {}", board_i);
+
         loop {
             if let Some((start, end)) = connection.read_frame().await.unwrap() {
                 let buf = &connection.buffer[start..end];
@@ -141,9 +168,9 @@ impl Versus {
         self.unsent_garbage_heights[board_i].clear();
         self.unsent_garbage_holes[board_i].clear();
         self.unsent_upcoming_minos[board_i].clear();
-        let res = PlayerActionListResponse::create(
+        let res = BoardExternalInfluence::create(
             bob,
-            &PlayerActionListResponseArgs {
+            &BoardExternalInfluenceArgs {
                 new_garbage_heights,
                 new_garbage_holes,
                 new_upcoming_minos,
