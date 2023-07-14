@@ -16,12 +16,22 @@ pub struct Connection {
 
     // The buffer for reading frames.
     pub buffer: BytesMut,
+
+    pub debug_name: String,
+    pub tx_count: usize,
+    pub rx_count: usize,
 }
 
 impl Connection {
     /// Create a new `Connection`, backed by `socket`. Read and write buffers
     /// are initialized.
-    pub fn new(socket: TcpStream) -> Connection {
+    pub fn new(socket: TcpStream, debug_name: String) -> Connection {
+        println!(
+            "{} new connecion: local={:?} peer={:?}",
+            debug_name,
+            socket.local_addr(),
+            socket.peer_addr()
+        );
         Connection {
             stream: BufWriter::new(socket),
             // Default to a 4KB read buffer. For the use case of mini redis,
@@ -29,11 +39,21 @@ impl Connection {
             // value to their specific use case. There is a high likelihood that
             // a larger read buffer will work better.
             buffer: BytesMut::with_capacity(4 * 1024),
+
+            debug_name,
+            tx_count: 0,
+            rx_count: 0,
         }
     }
 
     pub async fn write_frame(&mut self, content: &[u8]) -> Result<(), Box<dyn std::error::Error>> {
         assert!(content.len() <= u16::MAX as usize);
+        println!(
+            "{} sending content of size {}",
+            self.debug_name,
+            content.len()
+        );
+
         self.stream.write_u16(content.len() as u16).await?;
         self.stream.write(content).await?;
         self.stream.flush().await?;
@@ -52,6 +72,12 @@ impl Connection {
                     frame_length = self.buffer.get_u16() as usize;
                 }
             }
+            println!(
+                "{} connection check: {} / {}",
+                self.debug_name,
+                self.buffer.remaining(),
+                frame_length
+            );
             if frame_length > 0 && self.buffer.remaining() >= frame_length {
                 // return slice indecies to body
                 let buf = Cursor::new(&self.buffer[..]);
@@ -71,7 +97,9 @@ impl Connection {
             // On success, the number of bytes is returned. `0` indicates "end
             // of stream".
             // if 0 == self.stream.read_buf(&mut self.buffer).await? {
-            if 0 == read_buf(&mut self.stream, &mut self.buffer).await? {
+            let bytes_read = read_buf(&mut self.stream, &mut self.buffer).await?;
+            println!("{} Connection read {} bytes", self.debug_name, bytes_read);
+            if bytes_read == 0 {
                 // The remote closed the connection. For this to be a clean
                 // shutdown, there should be no data in the read buffer. If
                 // there is, this means that the peer closed the socket while

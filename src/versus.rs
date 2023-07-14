@@ -1,4 +1,4 @@
-use std::collections::VecDeque;
+use std::collections::{HashMap, VecDeque};
 
 use crate::{board::*, connection::Connection};
 use flatbuffers::FlatBufferBuilder;
@@ -7,6 +7,7 @@ use rand::prelude::*;
 use rand_chacha::ChaCha8Rng;
 use rand_xorshift::XorShiftRng;
 use std::sync::{Arc, Mutex};
+use tokio::io::AsyncReadExt;
 
 use tokio::{
     net::{TcpListener, TcpStream},
@@ -59,16 +60,25 @@ impl Versus {
 
     pub async fn run_match(
         server_address: &str,
-        client_spawner: Vec<fn(&str) -> tokio::task::JoinHandle<()>>,
+        client_spawner: Vec<fn(&str, String, u64) -> tokio::task::JoinHandle<()>>,
         master_seed: ChaCha8Rng,
     ) {
+        let mut master_seed = master_seed;
         // open the port
         let listener = TcpListener::bind(server_address).await.unwrap();
+
+        let secrets = (0..client_spawner.len())
+            .map(|_| master_seed.next_u64())
+            .collect::<Vec<_>>();
 
         // start clients
         let child_join_handles: Vec<tokio::task::JoinHandle<()>> = client_spawner
             .into_iter()
-            .map(|func| func(server_address))
+            .zip(secrets.clone())
+            .enumerate()
+            .map(|(i, (func, secret))| {
+                func(server_address, format!("client[{}]<->versus", i), secret)
+            })
             .collect();
 
         // Create the shared state.
@@ -77,21 +87,48 @@ impl Versus {
             master_seed,
         )));
         let all_ready = Arc::new(Barrier::new(child_join_handles.len()));
+        let mut remaining_secrets = secrets
+            .into_iter()
+            .enumerate()
+            .map(|(i, s)| (s.clone(), i))
+            .collect::<HashMap<u64, usize>>();
 
         // start listening to clients
-        for board_i in 0..child_join_handles.len() {
-            let (socket, _) = listener.accept().await.expect("client did not connect");
-            println!("Accepted client {}", board_i);
+        while !remaining_secrets.is_empty() {
+            // for board_i in 0..child_join_handles.len() {
+            let (mut socket, _) = listener.accept().await.expect("client did not connect");
+            println!("Got connection from {:?}", socket.peer_addr());
+
+            // note: we could have a malicious client here stalling the server
+            // but that would create too much complexity to handle this right for now.
+            let secret = match socket.read_u64().await {
+                Ok(s) => s,
+                Err(e) => {
+                    println!("Error reading secret: {}", e);
+                    continue;
+                }
+            };
+            let mut remaining_secrets = remaining_secrets.clone();
+            let board_i = match remaining_secrets.get(&secret) {
+                Some(i) => *i,
+                None => {
+                    println!("Rejecting unlisted secret: {}", secret);
+                    continue;
+                }
+            };
+            remaining_secrets.remove(&secret);
+
             // Clone the handle but not the inner value.
             let versus = versus.clone();
             let all_ready = all_ready.clone();
 
             tokio::spawn(async move {
+                println!("Accepted player {:?}", board_i);
                 Self::handle_client_messages(socket, board_i, versus, all_ready).await;
             });
         }
 
-        // end clients
+        // wait until we've finished with all clients.
         for join_handle in child_join_handles {
             // let _ = join_handle.join();
             let _ = join_handle.await;
@@ -104,7 +141,7 @@ impl Versus {
         versus: Arc<Mutex<Versus>>,
         all_ready: Arc<Barrier>,
     ) {
-        let mut connection = Connection::new(socket);
+        let mut connection = Connection::new(socket, format!("versus<->client[{}]", board_i));
         let mut bob = FlatBufferBuilder::with_capacity(1000);
 
         // Set up the boards and queues

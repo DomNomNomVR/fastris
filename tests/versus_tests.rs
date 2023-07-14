@@ -14,15 +14,27 @@ mod tests {
     use rand_chacha::ChaChaRng;
     use std::collections::VecDeque;
     use std::thread;
+    use tokio::io::AsyncWriteExt;
     use tokio::net::TcpStream;
 
-    fn example_client_spawner(server_address: &str) -> tokio::task::JoinHandle<()> {
+    fn example_client_spawner(
+        server_address: &str,
+        client_name: String,
+        secret: u64,
+    ) -> tokio::task::JoinHandle<()> {
         let server_address_string = server_address.to_string(); // make a copy to ensure lifetime correctness
         tokio::spawn(async move {
-            let stream = TcpStream::connect(server_address_string.as_str())
+            let mut stream = TcpStream::connect(server_address_string.as_str())
                 .await
                 .unwrap();
-            let mut client = ExampleClient::new(Connection::new(stream));
+            match stream.write_u64(secret).await {
+                Ok(_) => {}
+                Err(e) => {
+                    println!("failed to write secret: {}", e);
+                    return;
+                }
+            };
+            let mut client = ExampleClient::new(Connection::new(stream, client_name));
             client.play_game().await;
         })
     }
