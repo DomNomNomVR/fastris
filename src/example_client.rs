@@ -55,9 +55,9 @@ impl ExampleClient {
                             }
 
                             let row = Board::full_row(self.board.width) ^ (1 << garbage_hole);
-                            for i in 0..garbage_height {
-                                rows[i] = row;
-                            }
+                            rows[0..garbage_height]
+                                .iter_mut()
+                                .for_each(|row2| *row2 = row);
                         }
                     }
                     Err(e) => {

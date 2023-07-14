@@ -1,5 +1,5 @@
 use bytes::{Buf, BytesMut};
-use std::{io::Cursor};
+use std::io::Cursor;
 use tokio::{
     io::{AsyncWriteExt, BufWriter},
     net::TcpStream,

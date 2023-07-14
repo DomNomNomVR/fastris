@@ -343,12 +343,7 @@ pub fn mask_from_mino(m: &Mino, board_width: i8) -> Result<MinoMask, Penalty> {
                 bottom_row: m.pivot_y - 1,
             }),
             Orientation::Left => Ok(MinoMask {
-                covered: [
-                    0b11 << shift_to_pivot,
-                    0b11 << shift_to_pivot,
-                    0,
-                    0,
-                ],
+                covered: [0b11 << shift_to_pivot, 0b11 << shift_to_pivot, 0, 0],
                 bottom_row: m.pivot_y,
             }),
         },
@@ -472,6 +467,12 @@ impl Board {
     }
 }
 
+impl Default for Board {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl std::fmt::Display for Board {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let max_y = max(
@@ -492,7 +493,10 @@ impl std::fmt::Display for Board {
             2usize
         };
 
-        let mask_maybe: Option<MinoMask> = self.active_mino.as_ref().map(|mino| mask_from_mino(mino, self.width).expect("blah"));
+        let mask_maybe: Option<MinoMask> = self
+            .active_mino
+            .as_ref()
+            .map(|mino| mask_from_mino(mino, self.width).expect("blah"));
         let paint_mask = |x: i8, y: usize| -> char {
             match &mask_maybe {
                 None => ' ',
