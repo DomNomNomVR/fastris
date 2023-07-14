@@ -55,12 +55,12 @@ impl Connection {
         );
 
         self.stream.write_u16(content.len() as u16).await?;
-        self.stream.write(content).await?;
+        self.stream.write_all(content).await?;
         self.stream.flush().await?;
         Ok(())
     }
 
-    pub async fn read_frame<'a>(&'a mut self) -> Result<&'a [u8], Box<dyn std::error::Error>> {
+    pub async fn read_frame(&mut self) -> Result<&[u8], Box<dyn std::error::Error>> {
         let mut frame_length = 0usize;
         loop {
             // parse header
