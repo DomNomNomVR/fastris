@@ -1,4 +1,6 @@
 use std::collections::{HashMap, VecDeque};
+use std::future::Future;
+use std::process::Output;
 
 use crate::{board::*, connection::Connection};
 use flatbuffers::FlatBufferBuilder;
@@ -6,9 +8,10 @@ use rand::distributions::{Distribution, Uniform};
 use rand::prelude::*;
 use rand_chacha::ChaCha8Rng;
 use rand_xorshift::XorShiftRng;
-use std::sync::{Arc, Mutex};
 use tokio::io::AsyncReadExt;
+use tokio::sync::Mutex;
 
+use std::sync::Arc;
 use tokio::{
     net::{TcpListener, TcpStream},
     sync::Barrier,
@@ -93,6 +96,7 @@ impl Versus {
             .map(|(i, s)| (s.clone(), i))
             .collect::<HashMap<u64, usize>>();
 
+        let mut futures = Vec::new();
         // start listening to clients
         while !remaining_secrets.is_empty() {
             // for board_i in 0..child_join_handles.len() {
@@ -122,17 +126,12 @@ impl Versus {
             let versus = versus.clone();
             let all_ready = all_ready.clone();
 
-            tokio::spawn(async move {
-                println!("Accepted player {:?}", board_i);
-                Self::handle_client_messages(socket, board_i, versus, all_ready).await;
-            });
+            futures.push(Self::handle_client_messages(
+                socket, board_i, versus, all_ready,
+            ));
         }
 
-        // wait until we've finished with all clients.
-        for join_handle in child_join_handles {
-            // let _ = join_handle.join();
-            let _ = join_handle.await;
-        }
+        let responses = futures::future::join_all(futures).await;
     }
 
     async fn handle_client_messages(
@@ -146,7 +145,7 @@ impl Versus {
 
         // Set up the boards and queues
         {
-            let mut versus = versus.lock().unwrap();
+            let mut versus = versus.lock().await;
             versus.apply_garbage_push(board_i);
             versus.fill_upcoming_minos(board_i);
             versus.build_response(&mut bob, board_i);
@@ -164,13 +163,12 @@ impl Versus {
         println!("sent initial packet to client {}", board_i);
 
         loop {
-            let mut callback = |buf: &[u8]| {
-                // let buf = &connection.buffer[start..end];
+            if let Ok(buf) = connection.read_frame().await {
                 let action_list =
                     flatbuffers::root::<PlayerActionList>(buf).expect("unable to deserialize");
                 {
                     // This scope exists for locking versus for the minimal amount of
-                    let mut versus = versus.lock().unwrap();
+                    let mut versus = versus.lock().await;
                     for action in action_list.actions().unwrap() {
                         versus.apply_action(&action, board_i);
                     }
@@ -178,9 +176,6 @@ impl Versus {
                     // optimization TODO: at this point we only need to lock the unsent queues.
                     versus.build_response(&mut bob, board_i);
                 }
-            };
-            println!("server waiting for packet from {}", board_i);
-            if let Ok(()) = connection.read_frame(&mut callback).await {
             } else {
                 print!("ending client {} due to empty message", board_i);
                 break;

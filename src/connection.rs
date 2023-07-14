@@ -1,5 +1,5 @@
 use bytes::{Buf, BytesMut};
-use std::io::Cursor;
+use std::{future::Future, io::Cursor};
 use tokio::{
     io::{AsyncWriteExt, BufWriter},
     net::TcpStream,
@@ -60,10 +60,7 @@ impl Connection {
         Ok(())
     }
 
-    pub async fn read_frame(
-        &mut self,
-        data_callback: &mut impl FnMut(&[u8]),
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn read_frame<'a>(&'a mut self) -> Result<&'a [u8], Box<dyn std::error::Error>> {
         let mut frame_length = 0usize;
         loop {
             // parse header
@@ -87,8 +84,7 @@ impl Connection {
                 // data_callback(&self.buffer[start..end]);
                 // self.buffer.advance(frame_length);
                 let slice = self.buffer.get(start..end).unwrap();
-                data_callback(slice);
-                return Ok(());
+                return Ok(slice);
             }
 
             // There is not enough buffered data to read a frame. Attempt to
