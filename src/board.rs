@@ -344,12 +344,12 @@ pub fn mask_from_mino(m: &Mino, board_width: i8) -> Result<MinoMask, Penalty> {
             }),
             Orientation::Left => Ok(MinoMask {
                 covered: [
-                    0b11 << (shift_to_pivot - 0),
-                    0b11 << (shift_to_pivot - 0),
+                    0b11 << shift_to_pivot,
+                    0b11 << shift_to_pivot,
                     0,
                     0,
                 ],
-                bottom_row: m.pivot_y - 0,
+                bottom_row: m.pivot_y,
             }),
         },
 
@@ -410,9 +410,9 @@ impl Board {
 
     pub fn from_ascii_art(art: &str) -> Board {
         let lines = art
-            .split("\n")
+            .split('\n')
             .map(|line| line.split("//").next().unwrap())
-            .filter(|line| line.contains("|"))
+            .filter(|line| line.contains('|'))
             .collect::<Vec<_>>();
 
         let mut board = Board::new();
@@ -421,7 +421,7 @@ impl Board {
 
         for (line_i, line) in lines.iter().enumerate() {
             let row_i = lines.len() - 1 - line_i;
-            let segments = line.splitn(3, "|").collect::<Vec<&str>>();
+            let segments = line.splitn(3, '|').collect::<Vec<&str>>();
             assert_eq!(segments.len(), 3);
 
             // parse hold and spawn height
@@ -453,7 +453,7 @@ impl Board {
             let mut row_int: u16 = 0;
             for x in 0..board.width {
                 if row[x as usize] != ' ' {
-                    row_int |= 1 << board.width - 1 - x;
+                    row_int |= 1 << (board.width - 1 - x);
                 }
             }
             board.rows[row_i] = row_int;
@@ -492,10 +492,7 @@ impl std::fmt::Display for Board {
             2usize
         };
 
-        let mask_maybe: Option<MinoMask> = match &self.active_mino {
-            Some(mino) => Some(mask_from_mino(mino, self.width).expect("blah")),
-            None => None,
-        };
+        let mask_maybe: Option<MinoMask> = self.active_mino.as_ref().map(|mino| mask_from_mino(mino, self.width).expect("blah"));
         let paint_mask = |x: i8, y: usize| -> char {
             match &mask_maybe {
                 None => ' ',
@@ -506,7 +503,7 @@ impl std::fmt::Display for Board {
                     }
                     if mask.bottom_row <= y
                         && y < mask.bottom_row + 4
-                        && mask.covered[y - mask.bottom_row] & 1 << self.width - x - 1 > 0
+                        && mask.covered[y - mask.bottom_row] & 1 << (self.width - x - 1) > 0
                     {
                         return '#';
                     }
@@ -534,7 +531,7 @@ impl std::fmt::Display for Board {
             write!(f, "|")?;
             // board rows
             for x in 0..self.width {
-                let solid = self.rows[y] & 1 << self.width - x - 1 != 0;
+                let solid = self.rows[y] & 1 << (self.width - x - 1) != 0;
                 write!(
                     f,
                     "{}",
@@ -564,7 +561,7 @@ impl std::fmt::Display for Board {
                     Some(mino_type) => mino_type.variant_name().unwrap(),
                 }
             )?;
-            write!(f, "\n")?;
+            writeln!(f)?;
         }
         // write!(f, "({}, {})", self.x, self.y)
         std::fmt::Result::Ok(())
@@ -633,12 +630,12 @@ pub fn apply_action(a: &PlayerAction, b: &mut Board) -> Result<u8, Penalty> {
 
 fn spawn_mino(mino_type: MinoType, board: &Board) -> Mino {
     let pivot_x = (board.width - 1) / 2;
-    return Mino {
-        mino_type: mino_type,
+    Mino {
+        mino_type,
         orientation: Orientation::Up,
-        pivot_x: pivot_x,
+        pivot_x,
         pivot_y: board.spawn_height,
-    };
+    }
 }
 
 fn try_set_active_mino(board: &mut Board) -> Result<(), Penalty> {
@@ -664,7 +661,7 @@ fn try_set_active_mino(board: &mut Board) -> Result<(), Penalty> {
             }
         }
     }
-    return Ok(());
+    Ok(())
 }
 
 // const FOO: [(i8, i8); ] = 3u8;
@@ -771,14 +768,8 @@ fn apply_rotate180(_a: &Rotate180, board: &mut Board) -> Result<u8, Penalty> {
     apply_rotate(Orientation::rotate_180, board)
 }
 fn apply_hold(_a: &Hold, board: &mut Board) -> Result<u8, Penalty> {
-    let hold = match &board.active_mino {
-        Some(mino) => Some(mino.mino_type),
-        None => None,
-    };
-    board.active_mino = match board.hold {
-        None => None,
-        Some(mino_type) => Some(spawn_mino(mino_type, board)),
-    };
+    let hold = board.active_mino.as_ref().map(|mino| mino.mino_type);
+    board.active_mino = board.hold.map(|mino_type| spawn_mino(mino_type, board));
     board.hold = hold;
     Ok(0)
 }
@@ -851,7 +842,7 @@ fn apply_soft_drop(a: &SoftDrop, board: &mut Board) -> Result<u8, Penalty> {
     let mino = board.active_mino.as_mut().unwrap();
     let mut mask = mask_from_mino(mino, board.width)?;
     let repeats = a.repeats() as usize;
-    if repeats as usize > mask.bottom_row {
+    if repeats > mask.bottom_row {
         return Err(Penalty::new("trying to soft drop below floor"));
     }
     let new_pivot_y = mino.pivot_y - repeats;
@@ -882,10 +873,8 @@ fn apply_horizontal(a: &Horizontal, board: &mut Board) -> Result<u8, Penalty> {
         if new_pivot_x - mino.squares_left_of_pivot() < 0 {
             return Err(Penalty::new("trying to go past left edge"));
         }
-    } else {
-        if new_pivot_x + mino.squares_right_of_pivot() >= board.width {
-            return Err(Penalty::new("trying to go past right edge"));
-        }
+    } else if new_pivot_x + mino.squares_right_of_pivot() >= board.width {
+        return Err(Penalty::new("trying to go past right edge"));
     }
 
     // only do more expensive check if there's something we could intesect with on the bottom row.

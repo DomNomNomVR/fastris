@@ -1,5 +1,5 @@
 use bytes::{Buf, BytesMut};
-use std::{future::Future, io::Cursor};
+use std::{io::Cursor};
 use tokio::{
     io::{AsyncWriteExt, BufWriter},
     net::TcpStream,
@@ -64,10 +64,8 @@ impl Connection {
         let mut frame_length = 0usize;
         loop {
             // parse header
-            if frame_length == 0 {
-                if self.buffer.remaining() > 2 {
-                    frame_length = self.buffer.get_u16() as usize;
-                }
+            if frame_length == 0 && self.buffer.remaining() > 2 {
+                frame_length = self.buffer.get_u16() as usize;
             }
             println!(
                 "{} connection check: {} / {}",

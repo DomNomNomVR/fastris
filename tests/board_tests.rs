@@ -9,10 +9,10 @@ mod tests {
     use std::collections::VecDeque;
 
     fn split_two_board_ascii_art(two_board_ascii_art: &str) -> (String, String) {
-        assert!(two_board_ascii_art.contains(">")); // delimiter between boards
+        assert!(two_board_ascii_art.contains('>')); // delimiter between boards
         let tmp: (Vec<&str>, Vec<&str>) = two_board_ascii_art
-            .split("\n")
-            .map(|line| line.split(">").collect::<Vec<&str>>())
+            .split('\n')
+            .map(|line| line.split('>').collect::<Vec<&str>>())
             .filter(|pair| pair.len() == 2)
             .map(|mut pair| (pair.swap_remove(0), pair.swap_remove(0)))
             .unzip();

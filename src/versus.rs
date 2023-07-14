@@ -1,6 +1,6 @@
 use std::collections::{HashMap, VecDeque};
-use std::future::Future;
-use std::process::Output;
+
+
 
 use crate::{board::*, connection::Connection};
 use flatbuffers::FlatBufferBuilder;
@@ -40,7 +40,7 @@ impl Versus {
 
         // currently it's a 7-bag RNG.
         let mut mino_bag: Vec<MinoType> =
-            MinoType::ENUM_VALUES.iter().map(|t| (*t).clone()).collect();
+            MinoType::ENUM_VALUES.to_vec();
         mino_bag.shuffle(&mut mino_rng);
 
         Versus {
@@ -93,7 +93,7 @@ impl Versus {
         let mut remaining_secrets = secrets
             .into_iter()
             .enumerate()
-            .map(|(i, s)| (s.clone(), i))
+            .map(|(i, s)| (s, i))
             .collect::<HashMap<u64, usize>>();
 
         let mut futures = Vec::new();
@@ -217,7 +217,7 @@ impl Versus {
     }
 
     pub fn apply_action(&mut self, action: &PlayerAction<'_>, board_i: usize) {
-        let result = apply_action(&action, &mut self.boards[board_i]);
+        let result = apply_action(action, &mut self.boards[board_i]);
         match result {
             Ok(lines_sent) => {
                 assert_eq!(
@@ -239,8 +239,7 @@ impl Versus {
                 };
             }
             Err(penalty) => {
-                if penalty.significance >= 100 {
-                    return; // This player has lost.
+                if penalty.significance >= 100 {// This player has lost.
                 }
             }
         }

@@ -15,7 +15,7 @@ impl ExampleClient {
     pub fn new(connection: Connection) -> ExampleClient {
         ExampleClient {
             board: Board::new(),
-            connection: connection,
+            connection,
             garbage_heights: VecDeque::new(),
             garbage_holes: VecDeque::new(),
         }
@@ -93,7 +93,7 @@ impl ExampleClient {
         );
         // bob.push(action);
         // let action_vector = bob.end_vector(1);
-        let action_vector = bob.create_vector(&vec![action]);
+        let action_vector = bob.create_vector(&[action]);
         let action_list = PlayerActionList::create(
             bob,
             &PlayerActionListArgs {
