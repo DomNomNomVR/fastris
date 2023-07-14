@@ -1,7 +1,7 @@
 use bytes::{Buf, BytesMut};
 use std::io::Cursor;
 use tokio::{
-    io::{AsyncWriteExt, BufWriter},
+    io::{AsyncReadExt, AsyncWriteExt, BufWriter},
     net::TcpStream,
 };
 
@@ -61,50 +61,11 @@ impl Connection {
     }
 
     pub async fn read_frame(&mut self) -> Result<&[u8], Box<dyn std::error::Error>> {
-        let mut frame_length = 0usize;
-        loop {
-            // parse header
-            if frame_length == 0 && self.buffer.remaining() > 2 {
-                frame_length = self.buffer.get_u16() as usize;
-            }
-            println!(
-                "{} connection check: {} / {}",
-                self.debug_name,
-                self.buffer.remaining(),
-                frame_length
-            );
-            if frame_length > 0 && self.buffer.remaining() >= frame_length {
-                // return slice indecies to body
-                let buf = Cursor::new(&self.buffer[..]);
-                let start = buf.position() as usize;
-                let end = start + frame_length;
-                // let remaining = self.buffer.remaining();
-                // data_callback(&self.buffer[start..end]);
-                // self.buffer.advance(frame_length);
-                let slice = self.buffer.get(start..end).unwrap();
-                return Ok(slice);
-            }
-
-            // There is not enough buffered data to read a frame. Attempt to
-            // read more data from the socket.
-            //
-            // On success, the number of bytes is returned. `0` indicates "end
-            // of stream".
-            // if 0 == self.stream.read_buf(&mut self.buffer).await? {
-            let bytes_read = read_buf(&mut self.stream, &mut self.buffer).await?;
-            println!("{} Connection read {} bytes", self.debug_name, bytes_read);
-            if bytes_read == 0 {
-                // The remote closed the connection. For this to be a clean
-                // shutdown, there should be no data in the read buffer. If
-                // there is, this means that the peer closed the socket while
-                // sending a frame.
-                if self.buffer.is_empty() {
-                    // return Ok(None);
-                    return Err("normal end".into());
-                } else {
-                    return Err("connection reset by peer".into());
-                }
-            }
-        }
+        let frame_length = self.stream.read_u16().await?;
+        assert_ne!(frame_length, 0);
+        self.stream
+            .read_exact(&mut self.buffer[..frame_length as usize])
+            .await?;
+        Ok(&self.buffer[..frame_length as usize])
     }
 }
