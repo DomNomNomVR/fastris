@@ -127,8 +127,8 @@ impl Versus {
         println!("sent initial packet to client {}", board_i);
 
         loop {
-            if let Some((start, end)) = connection.read_frame().await.unwrap() {
-                let buf = &connection.buffer[start..end];
+            let mut callback = |buf: &[u8]| {
+                // let buf = &connection.buffer[start..end];
                 let action_list =
                     flatbuffers::root::<PlayerActionList>(buf).expect("unable to deserialize");
                 {
@@ -141,13 +141,19 @@ impl Versus {
                     // optimization TODO: at this point we only need to lock the unsent queues.
                     versus.build_response(&mut bob, board_i);
                 }
+            };
+            println!("server waiting for packet from {}", board_i);
+            if let Ok(()) = connection.read_frame(&mut callback).await {
             } else {
                 print!("ending client {} due to empty message", board_i);
                 break;
             }
+            println!("server got packet from {}", board_i);
 
             match connection.write_frame(bob.finished_data()).await {
-                Ok(()) => {}
+                Ok(()) => {
+                    println!("wrote packet to {}", board_i);
+                }
                 Err(e) => {
                     print!("ending client {} due to write error: {}", board_i, e);
                     break;
@@ -188,7 +194,7 @@ impl Versus {
                     2,
                     "Target selection for multiple players not yet implemented"
                 );
-                let target_board = self.boards.len() - board_i;
+                let target_board = 1 - board_i;
                 self.unused_garbage_heights[target_board].push_back(lines_sent);
                 self.unsent_garbage_heights[target_board].push_back(lines_sent);
 

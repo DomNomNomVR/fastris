@@ -31,7 +31,7 @@ mod tests {
     async fn test_game() {
         // let versus = Versus::new(2, ChaCha8Rng::seed_from_u64(4));
         let server_address = "localhost:6734";
-        let server_future = Versus::run_match(
+        Versus::run_match(
             server_address,
             vec![example_client_spawner, example_client_spawner],
             ChaCha8Rng::seed_from_u64(4),

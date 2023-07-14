@@ -42,7 +42,8 @@ impl Connection {
 
     pub async fn read_frame(
         &mut self,
-    ) -> Result<Option<(usize, usize)>, Box<dyn std::error::Error>> {
+        data_callback: &mut impl FnMut(&[u8]),
+    ) -> Result<(), Box<dyn std::error::Error>> {
         let mut frame_length = 0usize;
         loop {
             // parse header
@@ -56,8 +57,12 @@ impl Connection {
                 let buf = Cursor::new(&self.buffer[..]);
                 let start = buf.position() as usize;
                 let end = start + frame_length;
-                self.buffer.advance(frame_length);
-                return Ok(Some((start, end)));
+                // let remaining = self.buffer.remaining();
+                // data_callback(&self.buffer[start..end]);
+                // self.buffer.advance(frame_length);
+                let slice = self.buffer.get(start..end).unwrap();
+                data_callback(slice);
+                return Ok(());
             }
 
             // There is not enough buffered data to read a frame. Attempt to
@@ -72,7 +77,8 @@ impl Connection {
                 // there is, this means that the peer closed the socket while
                 // sending a frame.
                 if self.buffer.is_empty() {
-                    return Ok(None);
+                    // return Ok(None);
+                    return Err("normal end".into());
                 } else {
                     return Err("connection reset by peer".into());
                 }
