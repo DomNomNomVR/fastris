@@ -228,33 +228,30 @@ mod tests {
                     let buf = bob.finished_data();
                     let action2 = flatbuffers::root::<PlayerAction>(buf).unwrap();
                     let mut child = parent.clone();
-                    match apply_action(&action2, &mut child) {
-                        Ok(_) => {
-                            if child.rows[0] == 0 {
-                                // Found a solution. Write it to disk
-                                let mut action_list = PlayerActionListT::default();
-                                let mut a_list = Vec::<PlayerActionT>::new();
-                                for a in history.clone().into_iter().chain([action]) {
-                                    let mut player_action = PlayerActionT::default();
-                                    player_action.action = a;
-                                    a_list.push(player_action);
-                                }
-                                action_list.actions = Some(a_list);
-                                bob.reset();
-                                let packed = action_list.pack(&mut bob);
-                                bob.finish(packed, None);
-                                let buf = bob.finished_data();
-
-                                fs::write(&solution_path, buf).expect("Unable to write file");
-                                found_solution = true;
-                            } else if child.rows[4] == 0 {
-                                // never hard drop to above 4 high
-                                let mut child_history = history.clone();
-                                child_history.push(action.clone());
-                                search_queue.push_back((child, child_history));
+                    if apply_action(&action2, &mut child).is_ok() {
+                        if child.rows[0] == 0 {
+                            // Found a solution. Write it to disk
+                            let mut action_list = PlayerActionListT::default();
+                            let mut a_list = Vec::<PlayerActionT>::new();
+                            for a in history.clone().into_iter().chain([action]) {
+                                let mut player_action = PlayerActionT::default();
+                                player_action.action = a;
+                                a_list.push(player_action);
                             }
+                            action_list.actions = Some(a_list);
+                            bob.reset();
+                            let packed = action_list.pack(&mut bob);
+                            bob.finish(packed, None);
+                            let buf = bob.finished_data();
+
+                            fs::write(&solution_path, buf).expect("Unable to write file");
+                            found_solution = true;
+                        } else if child.rows[4] == 0 {
+                            // never hard drop to above 4 high
+                            let mut child_history = history.clone();
+                            child_history.push(action.clone());
+                            search_queue.push_back((child, child_history));
                         }
-                        Err(_) => (),
                     }
                 }
 

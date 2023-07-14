@@ -1,7 +1,5 @@
 use std::collections::{HashMap, VecDeque};
 
-
-
 use crate::{board::*, connection::Connection};
 use flatbuffers::FlatBufferBuilder;
 use rand::distributions::{Distribution, Uniform};
@@ -10,6 +8,7 @@ use rand_chacha::ChaCha8Rng;
 use rand_xorshift::XorShiftRng;
 use tokio::io::AsyncReadExt;
 use tokio::sync::Mutex;
+use tokio::task::JoinHandle;
 
 use std::sync::Arc;
 use tokio::{
@@ -32,6 +31,8 @@ pub struct Versus {
     pub unsent_upcoming_minos: Vec<VecDeque<MinoType>>,
 }
 
+pub type SpawnClient = fn(&str, String, u64) -> JoinHandle<()>;
+
 impl Versus {
     pub fn new(num_players: usize, mut master_seed: ChaCha8Rng) -> Versus {
         let seed_range = Uniform::new(0, u64::MAX);
@@ -39,8 +40,7 @@ impl Versus {
         let garbage_rng = XorShiftRng::seed_from_u64(seed_range.sample(&mut master_seed));
 
         // currently it's a 7-bag RNG.
-        let mut mino_bag: Vec<MinoType> =
-            MinoType::ENUM_VALUES.to_vec();
+        let mut mino_bag: Vec<MinoType> = MinoType::ENUM_VALUES.to_vec();
         mino_bag.shuffle(&mut mino_rng);
 
         Versus {
@@ -63,7 +63,7 @@ impl Versus {
 
     pub async fn run_match(
         server_address: &str,
-        client_spawner: Vec<fn(&str, String, u64) -> tokio::task::JoinHandle<()>>,
+        client_spawner: Vec<SpawnClient>,
         master_seed: ChaCha8Rng,
     ) {
         let mut master_seed = master_seed;
@@ -230,16 +230,13 @@ impl Versus {
                 self.unsent_garbage_heights[target_board].push_back(lines_sent);
 
                 // push garbage into board after hard drop happens.
-                match action.action_type() {
-                    PlayerActions::HardDrop => {
-                        self.apply_garbage_push(board_i);
-                        self.fill_upcoming_minos(board_i);
-                    }
-                    _ => {}
+                if let PlayerActions::HardDrop = action.action_type() {
+                    self.apply_garbage_push(board_i);
+                    self.fill_upcoming_minos(board_i);
                 };
             }
             Err(penalty) => {
-                if penalty.significance >= 100 {// This player has lost.
+                if penalty.significance >= 100 { // This player has lost.
                 }
             }
         }
