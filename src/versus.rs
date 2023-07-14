@@ -112,7 +112,6 @@ impl Versus {
                     continue;
                 }
             };
-            let mut remaining_secrets = remaining_secrets.clone();
             let board_i = match remaining_secrets.get(&secret) {
                 Some(i) => *i,
                 None => {
@@ -131,7 +130,7 @@ impl Versus {
             ));
         }
 
-        let responses = futures::future::join_all(futures).await;
+        let _ = futures::future::join_all(futures).await;
     }
 
     async fn handle_client_messages(
