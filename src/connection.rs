@@ -15,7 +15,7 @@ pub struct Connection {
     pub stream: BufWriter<TcpStream>,
 
     // The buffer for reading frames.
-    pub buffer: BytesMut,
+    pub buffer: Vec<u8>,
 
     pub debug_name: String,
     pub tx_count: usize,
@@ -34,12 +34,7 @@ impl Connection {
         );
         Connection {
             stream: BufWriter::new(socket),
-            // Default to a 4KB read buffer. For the use case of mini redis,
-            // this is fine. However, real applications will want to tune this
-            // value to their specific use case. There is a high likelihood that
-            // a larger read buffer will work better.
-            buffer: BytesMut::with_capacity(4 * 1024),
-
+            buffer: Vec::with_capacity(4 * 1024),
             debug_name,
             tx_count: 0,
             rx_count: 0,
@@ -61,11 +56,14 @@ impl Connection {
     }
 
     pub async fn read_frame(&mut self) -> Result<&[u8], Box<dyn std::error::Error>> {
-        let frame_length = self.stream.read_u16().await?;
+        let frame_length = self.stream.read_u16().await? as usize;
         assert_ne!(frame_length, 0);
+        if frame_length > self.buffer.len() {
+            self.buffer.resize(frame_length, 0);
+        }
         self.stream
-            .read_exact(&mut self.buffer[..frame_length as usize])
+            .read_exact(&mut self.buffer[..frame_length])
             .await?;
-        Ok(&self.buffer[..frame_length as usize])
+        Ok(&self.buffer[..frame_length])
     }
 }
