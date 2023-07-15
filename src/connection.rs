@@ -1,11 +1,7 @@
-use bytes::{Buf, BytesMut};
-use std::io::Cursor;
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt, BufWriter},
     net::TcpStream,
 };
-
-use tokio_util::io::read_buf;
 
 #[derive(Debug)]
 pub struct Connection {
@@ -26,12 +22,6 @@ impl Connection {
     /// Create a new `Connection`, backed by `socket`. Read and write buffers
     /// are initialized.
     pub fn new(socket: TcpStream, debug_name: String) -> Connection {
-        println!(
-            "{} new connecion: local={:?} peer={:?}",
-            debug_name,
-            socket.local_addr(),
-            socket.peer_addr()
-        );
         Connection {
             stream: BufWriter::new(socket),
             buffer: Vec::with_capacity(4 * 1024),
@@ -43,12 +33,6 @@ impl Connection {
 
     pub async fn write_frame(&mut self, content: &[u8]) -> Result<(), Box<dyn std::error::Error>> {
         assert!(content.len() <= u16::MAX as usize);
-        println!(
-            "{} sending content of size {}",
-            self.debug_name,
-            content.len()
-        );
-
         self.stream.write_u16(content.len() as u16).await?;
         self.stream.write_all(content).await?;
         self.stream.flush().await?;

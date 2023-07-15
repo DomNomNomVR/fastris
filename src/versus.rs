@@ -1,16 +1,17 @@
-use std::collections::{HashMap, VecDeque};
-
 use crate::{board::*, connection::Connection};
 use flatbuffers::FlatBufferBuilder;
+use futures::future::{AbortHandle, Abortable, Aborted};
+use futures::stream::FuturesUnordered;
+use futures::StreamExt;
 use rand::distributions::{Distribution, Uniform};
 use rand::prelude::*;
 use rand_chacha::ChaCha8Rng;
 use rand_xorshift::XorShiftRng;
+use std::collections::{HashMap, VecDeque};
+use std::sync::Arc;
 use tokio::io::AsyncReadExt;
 use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
-
-use std::sync::Arc;
 use tokio::{
     net::{TcpListener, TcpStream},
     sync::Barrier,
@@ -75,12 +76,18 @@ impl Versus {
             .collect::<Vec<_>>();
 
         // start clients
-        let child_join_handles: Vec<tokio::task::JoinHandle<()>> = client_spawner
+        let mut client_abort_handles = Vec::new();
+        let child_join_handles: Vec<_> = client_spawner
             .into_iter()
             .zip(secrets.clone())
             .enumerate()
             .map(|(i, (func, secret))| {
-                func(server_address, format!("client[{}]<->versus", i), secret)
+                let (abort_handle, abort_registration) = AbortHandle::new_pair();
+                client_abort_handles.push(abort_handle);
+                Abortable::new(
+                    func(server_address, format!("client[{}]<->versus", i), secret),
+                    abort_registration,
+                )
             })
             .collect();
 
@@ -96,12 +103,12 @@ impl Versus {
             .map(|(i, s)| (s, i))
             .collect::<HashMap<u64, usize>>();
 
-        let mut futures = Vec::new();
         // start listening to clients
+        let mut futures = FuturesUnordered::new();
+        let mut abort_handles = Vec::new();
         while !remaining_secrets.is_empty() {
             // for board_i in 0..child_join_handles.len() {
             let (mut socket, _) = listener.accept().await.expect("client did not connect");
-            println!("Got connection from {:?}", socket.peer_addr());
 
             // note: we could have a malicious client here stalling the server
             // but that would create too much complexity to handle this right for now.
@@ -125,12 +132,40 @@ impl Versus {
             let versus = versus.clone();
             let all_ready = all_ready.clone();
 
-            futures.push(Self::handle_client_messages(
-                socket, board_i, versus, all_ready,
+            let (abort_handle, abort_registration) = AbortHandle::new_pair();
+            abort_handles.push(abort_handle);
+            futures.push(Abortable::new(
+                Self::handle_client_messages(socket, board_i, versus, all_ready),
+                abort_registration,
             ));
         }
 
-        let _ = futures::future::join_all(futures).await;
+        // let _ = futures::future::join_all(futures).await;
+        // futures.
+        let mut active_players = futures.len();
+        while let Some(result) = futures.next().await {
+            // let value = result; // a potential stream error
+            // break;
+            // use value
+            println!("board has finished: {:?}", result);
+            active_players -= 1;
+            if active_players == 1 {
+                // we have a winner
+                break;
+            }
+        }
+        println!("winner found");
+        for abort_handle in abort_handles.into_iter() {
+            abort_handle.abort();
+        }
+        println!("all boards aborted");
+        for abort_handle in client_abort_handles.into_iter() {
+            abort_handle.abort();
+        }
+        println!("all clients aborted");
+        println!("Server has finished");
+        let _ = futures::future::join_all(child_join_handles).await;
+        println!("All clients have shut down");
     }
 
     async fn handle_client_messages(
@@ -138,7 +173,7 @@ impl Versus {
         board_i: usize,
         versus: Arc<Mutex<Versus>>,
         all_ready: Arc<Barrier>,
-    ) {
+    ) -> Result<(), Penalty> {
         let mut connection = Connection::new(socket, format!("versus<->client[{}]", board_i));
         let mut bob = FlatBufferBuilder::with_capacity(1000);
 
@@ -155,42 +190,53 @@ impl Versus {
         match connection.write_frame(bob.finished_data()).await {
             Ok(()) => {}
             Err(e) => {
-                print!("ending client {} due to write error: {}", board_i, e);
-                return;
+                return Err(Penalty::new(
+                    format!("ending client {} due to write error: {}", board_i, e).as_str(),
+                ));
             }
         };
-        println!("sent initial packet to client {}", board_i);
 
         loop {
-            if let Ok(buf) = connection.read_frame().await {
-                let action_list =
-                    flatbuffers::root::<PlayerActionList>(buf).expect("unable to deserialize");
-                {
-                    // This scope exists for locking versus for the minimal amount of
-                    let mut versus = versus.lock().await;
-                    for action in action_list.actions().unwrap() {
-                        versus.apply_action(&action, board_i);
-                    }
+            match connection.read_frame().await {
+                Ok(buf) => {
+                    let action_list =
+                        flatbuffers::root::<PlayerActionList>(buf).expect("unable to deserialize");
+                    {
+                        // This scope exists for locking versus for the minimal amount of
+                        let mut versus = versus.lock().await;
+                        for action in action_list.actions().unwrap() {
+                            match versus.apply_action(&action, board_i) {
+                                Ok(_) => {}
+                                Err(e) => {
+                                    println!("Err when versus.apply_action: {:?}", e);
+                                    return Err(e);
+                                }
+                            }
+                        }
 
-                    // optimization TODO: at this point we only need to lock the unsent queues.
-                    versus.build_response(&mut bob, board_i);
+                        // optimization TODO: at this point we only need to lock the unsent queues.
+                        versus.build_response(&mut bob, board_i);
+                    }
                 }
-            } else {
-                print!("ending client {} due to empty message", board_i);
-                break;
+                Err(e) => {
+                    print!("client {} quitting due to server quit: {}", board_i, e);
+                    return Ok(());
+                }
             }
-            println!("server got packet from {}", board_i);
 
             match connection.write_frame(bob.finished_data()).await {
-                Ok(()) => {
-                    println!("wrote packet to {}", board_i);
-                }
+                Ok(()) => {}
                 Err(e) => {
                     print!("ending client {} due to write error: {}", board_i, e);
                     break;
                 }
             };
         }
+
+        println!(
+            "This should never happen unless we change code to quit if the other player looses."
+        );
+        Ok(())
     }
 
     pub fn build_response(&mut self, bob: &mut FlatBufferBuilder, board_i: usize) {
@@ -216,7 +262,11 @@ impl Versus {
         bob.finish(res, None);
     }
 
-    pub fn apply_action(&mut self, action: &PlayerAction<'_>, board_i: usize) {
+    pub fn apply_action(
+        &mut self,
+        action: &PlayerAction<'_>,
+        board_i: usize,
+    ) -> Result<(), Penalty> {
         let result = apply_action(action, &mut self.boards[board_i]);
         match result {
             Ok(lines_sent) => {
@@ -234,9 +284,14 @@ impl Versus {
                     self.apply_garbage_push(board_i);
                     self.fill_upcoming_minos(board_i);
                 };
+                Ok(())
             }
             Err(penalty) => {
-                if penalty.significance >= 100 { // This player has lost.
+                if penalty.significance >= 100 {
+                    // This player has lost.
+                    Err(penalty)
+                } else {
+                    Ok(())
                 }
             }
         }

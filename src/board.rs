@@ -644,6 +644,7 @@ fn spawn_mino(mino_type: MinoType, board: &Board) -> Mino {
 
 fn try_set_active_mino(board: &mut Board) -> Result<(), Penalty> {
     if board.active_mino.is_none() {
+        println!("Setting active mino starting from: \n{}", board);
         let maybe_mino_type = board.upcoming_minos.pop_front();
         match maybe_mino_type {
             None => (),
@@ -652,7 +653,8 @@ fn try_set_active_mino(board: &mut Board) -> Result<(), Penalty> {
                 if board.rows[board.spawn_height] != 0 {
                     let mask = mask_from_mino(&mino, board.width)?;
                     if test_intersection(&mask, &board.rows) {
-                        board.active_mino = Some(mino);
+                        // put it back in the queue before erroring out.
+                        board.upcoming_minos.push_front(mino.mino_type);
                         return Err(Penalty {
                             reason: "TOP-OUT!".to_string(),
                             significance: 100,
