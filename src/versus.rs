@@ -1,4 +1,5 @@
 use crate::{board::*, connection::Connection};
+use async_trait::async_trait;
 use flatbuffers::FlatBufferBuilder;
 use futures::future::{AbortHandle, Abortable, Aborted};
 use futures::stream::FuturesUnordered;
@@ -10,6 +11,7 @@ use rand_xorshift::XorShiftRng;
 use std::collections::{HashMap, VecDeque};
 use std::sync::Arc;
 use tokio::io::AsyncReadExt;
+use tokio::io::AsyncWriteExt;
 use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
 use tokio::{
@@ -32,7 +34,34 @@ pub struct Versus {
     pub unsent_upcoming_minos: Vec<VecDeque<MinoType>>,
 }
 
-pub type SpawnClient = fn(&str, String, u64) -> JoinHandle<()>;
+pub type SpawnClient = Box<dyn Client>;
+
+#[async_trait]
+pub trait Client: Send + 'static {
+    async fn play_game(&mut self, c: Connection);
+
+    fn client_spawner(
+        this: Box<Self>,
+        server_address: &str,
+        client_name: String,
+        secret: u64,
+    ) -> tokio::task::JoinHandle<()> {
+        let server_address_string = server_address.to_string(); // make a copy to ensure lifetime correctness
+        tokio::spawn(async move {
+            let mut stream = TcpStream::connect(server_address_string.as_str())
+                .await
+                .unwrap();
+            match stream.write_u64(secret).await {
+                Ok(_) => {}
+                Err(e) => {
+                    println!("failed to write secret: {}", e);
+                    return;
+                }
+            };
+            this.play_game(Connection::new(stream, client_name)).await;
+        })
+    }
+}
 
 impl Versus {
     pub fn new(num_players: usize, mut master_seed: ChaCha8Rng) -> Versus {
