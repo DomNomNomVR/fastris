@@ -40,26 +40,20 @@ pub type SpawnClient = Box<dyn Client>;
 pub trait Client: Send + 'static {
     async fn play_game(&mut self, c: Connection);
 
-    fn client_spawner(
-        this: Box<Self>,
-        server_address: &str,
-        client_name: String,
-        secret: u64,
-    ) -> tokio::task::JoinHandle<()> {
+    async fn client_spawner(&mut self, server_address: &str, client_name: String, secret: u64) {
         let server_address_string = server_address.to_string(); // make a copy to ensure lifetime correctness
-        tokio::spawn(async move {
-            let mut stream = TcpStream::connect(server_address_string.as_str())
-                .await
-                .unwrap();
-            match stream.write_u64(secret).await {
-                Ok(_) => {}
-                Err(e) => {
-                    println!("failed to write secret: {}", e);
-                    return;
-                }
-            };
-            this.play_game(Connection::new(stream, client_name)).await;
-        })
+
+        let mut stream = TcpStream::connect(server_address_string.as_str())
+            .await
+            .unwrap();
+        match stream.write_u64(secret).await {
+            Ok(_) => {}
+            Err(e) => {
+                println!("failed to write secret: {}", e);
+                return;
+            }
+        };
+        self.play_game(Connection::new(stream, client_name)).await;
     }
 }
 
@@ -110,13 +104,16 @@ impl Versus {
             .into_iter()
             .zip(secrets.clone())
             .enumerate()
-            .map(|(i, (func, secret))| {
+            .map(|(i, (mut func, secret))| {
                 let (abort_handle, abort_registration) = AbortHandle::new_pair();
                 client_abort_handles.push(abort_handle);
-                Abortable::new(
-                    func(server_address, format!("client[{}]<->versus", i), secret),
-                    abort_registration,
-                )
+
+                let server_address = server_address.to_owned();
+                let handle = tokio::spawn(async move {
+                    func.client_spawner(&server_address, format!("client[{}]<->versus", i), secret)
+                        .await;
+                });
+                Abortable::new(handle, abort_registration)
             })
             .collect();
 
