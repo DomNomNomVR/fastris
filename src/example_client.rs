@@ -3,11 +3,7 @@ use std::collections::VecDeque;
 use async_trait::async_trait;
 use flatbuffers::FlatBufferBuilder;
 
-use crate::{
-    board::*,
-    connection::{self, Connection},
-    versus,
-};
+use crate::{board::*, connection::Connection, versus};
 
 pub struct ExampleClient {
     board: Board,
@@ -46,6 +42,12 @@ impl ExampleClient {
             },
         );
         bob.finish(action_list, None);
+    }
+}
+
+impl Default for ExampleClient {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

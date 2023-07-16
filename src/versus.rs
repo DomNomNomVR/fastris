@@ -1,7 +1,7 @@
 use crate::{board::*, connection::Connection};
 use async_trait::async_trait;
 use flatbuffers::FlatBufferBuilder;
-use futures::future::{AbortHandle, Abortable, Aborted};
+use futures::future::{AbortHandle, Abortable};
 use futures::stream::FuturesUnordered;
 use futures::StreamExt;
 use rand::distributions::{Distribution, Uniform};
@@ -13,7 +13,6 @@ use std::sync::Arc;
 use tokio::io::AsyncReadExt;
 use tokio::io::AsyncWriteExt;
 use tokio::sync::Mutex;
-use tokio::task::JoinHandle;
 use tokio::{
     net::{TcpListener, TcpStream},
     sync::Barrier,
