@@ -644,7 +644,6 @@ fn spawn_mino(mino_type: MinoType, board: &Board) -> Mino {
 
 fn try_set_active_mino(board: &mut Board) -> Result<(), Penalty> {
     if board.active_mino.is_none() {
-        println!("Setting active mino starting from: \n{}", board);
         let maybe_mino_type = board.upcoming_minos.pop_front();
         match maybe_mino_type {
             None => (),

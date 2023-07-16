@@ -108,3 +108,11 @@ impl versus::Client for ExampleClient {
 
     // pub fn apply_external_influence(&mut self, influence: BoardExternalInfluence<'_>) {}
 }
+
+pub struct JustWaitClient {}
+#[async_trait]
+impl versus::Client for JustWaitClient {
+    async fn play_game(&mut self, mut _connection: Connection) {
+        tokio::time::sleep(std::time::Duration::from_millis(3000)).await;
+    }
+}
