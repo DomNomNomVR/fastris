@@ -105,7 +105,7 @@ impl Versus {
 
         // start listening to clients
         let mut futures = FuturesUnordered::new();
-        let mut abort_handles = Vec::new();
+        let mut server_abort_handles = Vec::new();
         while !remaining_secrets.is_empty() {
             // for board_i in 0..child_join_handles.len() {
             let (mut socket, _) = listener.accept().await.expect("client did not connect");
@@ -133,20 +133,15 @@ impl Versus {
             let all_ready = all_ready.clone();
 
             let (abort_handle, abort_registration) = AbortHandle::new_pair();
-            abort_handles.push(abort_handle);
+            server_abort_handles.push(abort_handle);
             futures.push(Abortable::new(
                 Self::handle_client_messages(socket, board_i, versus, all_ready),
                 abort_registration,
             ));
         }
 
-        // let _ = futures::future::join_all(futures).await;
-        // futures.
         let mut active_players = futures.len();
         while let Some(result) = futures.next().await {
-            // let value = result; // a potential stream error
-            // break;
-            // use value
             println!("board has finished: {:?}", result);
             active_players -= 1;
             if active_players == 1 {
@@ -155,7 +150,7 @@ impl Versus {
             }
         }
         println!("winner found");
-        for abort_handle in abort_handles.into_iter() {
+        for abort_handle in server_abort_handles.into_iter() {
             abort_handle.abort();
         }
         println!("all boards aborted");

@@ -63,7 +63,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_game() {
-        // let versus = Versus::new(2, ChaCha8Rng::seed_from_u64(4));
         let server_address = "localhost:6734";
         Versus::run_match(
             server_address,
