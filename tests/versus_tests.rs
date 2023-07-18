@@ -3,7 +3,7 @@ mod tests {
     use fastris::example_client::ExampleClient;
     use fastris::example_client::JustWaitClient;
     use fastris::versus::*;
-    use tokio::process::Command;
+    
 
     extern crate fastris;
     extern crate flatbuffers;
