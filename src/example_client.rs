@@ -1,4 +1,3 @@
-// mod fastris;
 use std::collections::VecDeque;
 
 use async_trait::async_trait;
@@ -9,15 +8,12 @@ use crate::{
     connection::Connection,
     versus::{self},
 };
-// crate fastris;
 
 pub struct ExampleClient {
     board: Board,
     garbage_heights: VecDeque<u8>,
     garbage_holes: VecDeque<i8>,
 }
-
-
 
 impl ExampleClient {
     pub fn new() -> ExampleClient {
@@ -30,8 +26,6 @@ impl ExampleClient {
 
     fn build_actions(&mut self, bob: &mut FlatBufferBuilder) {
         bob.reset();
-        // Let PlayerActions
-        // let action_vector = bob.start_vector::<&PlayerAction>(1);
         let hard_drop = HardDrop::create(bob, &HardDropArgs {});
         let action = PlayerAction::create(
             bob,
@@ -40,8 +34,6 @@ impl ExampleClient {
                 action: Some(hard_drop.as_union_value()),
             },
         );
-        // bob.push(action);
-        // let action_vector = bob.end_vector(1);
         let action_vector = bob.create_vector(&[action]);
         let action_list = PlayerActionList::create(
             bob,
