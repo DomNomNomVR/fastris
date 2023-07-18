@@ -12,6 +12,8 @@ use std::collections::{HashMap, VecDeque};
 use std::sync::Arc;
 use tokio::io::AsyncReadExt;
 use tokio::io::AsyncWriteExt;
+use tokio::process::Command;
+use tokio::select;
 use tokio::sync::Mutex;
 use tokio::{
     net::{TcpListener, TcpStream},
@@ -56,6 +58,32 @@ pub trait Client: Send + 'static {
     }
 }
 
+pub struct BinaryExecutableClient {
+    pub relative_path: String,
+}
+#[async_trait]
+impl Client for BinaryExecutableClient {
+    async fn play_game(&mut self, _: Connection) {
+        todo!("lel. bad design");
+    }
+
+    async fn client_spawner(&mut self, server_address: &str, client_name: String, secret: u64) {
+        println!("about to spawn exe");
+        let _output = Command::new(&self.relative_path)
+            .arg(server_address)
+            .arg(&client_name)
+            .arg(secret.to_string())
+            .output()
+            .await
+            .expect("couldn't get output from process");
+        println!(
+            "got exe output: \nstdout:\n{}\nstderr:\n{}",
+            std::str::from_utf8(&_output.stdout).expect("invalid utf8"),
+            std::str::from_utf8(&_output.stderr).expect("invalid utf8"),
+        );
+    }
+}
+
 impl Versus {
     pub fn new(num_players: usize, mut master_seed: ChaCha8Rng) -> Versus {
         let seed_range = Uniform::new(0, u64::MAX);
@@ -93,13 +121,14 @@ impl Versus {
         // open the port
         let listener = TcpListener::bind(server_address).await.unwrap();
 
-        let secrets = (0..client_spawner.len())
+        let num_players = client_spawner.len();
+        let secrets = (0..num_players)
             .map(|_| master_seed.next_u64())
             .collect::<Vec<_>>();
 
         // start clients
         let mut client_abort_handles = Vec::new();
-        let child_join_handles: Vec<_> = client_spawner
+        let child_join_handles: FuturesUnordered<_> = client_spawner
             .into_iter()
             .zip(secrets.clone())
             .enumerate()
@@ -117,11 +146,8 @@ impl Versus {
             .collect();
 
         // Create the shared state.
-        let versus = Arc::new(Mutex::new(Versus::new(
-            child_join_handles.len(),
-            master_seed,
-        )));
-        let all_ready = Arc::new(Barrier::new(child_join_handles.len()));
+        let versus = Arc::new(Mutex::new(Versus::new(num_players, master_seed)));
+        let all_ready = Arc::new(Barrier::new(num_players));
         let mut remaining_secrets = secrets
             .into_iter()
             .enumerate()
@@ -131,38 +157,45 @@ impl Versus {
         // start listening to clients
         let mut futures = FuturesUnordered::new();
         let mut server_abort_handles = Vec::new();
+        let mut child_join_handles_iter = child_join_handles.into_iter();
         while !remaining_secrets.is_empty() {
-            // for board_i in 0..child_join_handles.len() {
-            let (mut socket, _) = listener.accept().await.expect("client did not connect");
-
-            // note: we could have a malicious client here stalling the server
-            // but that would create too much complexity to handle this right for now.
-            let secret = match socket.read_u64().await {
-                Ok(s) => s,
-                Err(e) => {
-                    println!("Error reading secret: {}", e);
-                    continue;
+            tokio::select! {
+                _early_child_death = child_join_handles_iter.next().unwrap() => {
+                    panic!("oh noes! a client died early");
                 }
-            };
-            let board_i = match remaining_secrets.get(&secret) {
-                Some(i) => *i,
-                None => {
-                    println!("Rejecting unlisted secret: {}", secret);
-                    continue;
-                }
-            };
-            remaining_secrets.remove(&secret);
+                socket_maybe = listener.accept() => {
+                    let (mut socket, _) = socket_maybe.expect("client did not connect");
 
-            // Clone the handle but not the inner value.
-            let versus = versus.clone();
-            let all_ready = all_ready.clone();
+                // note: we could have a malicious client here stalling the server
+                // but that would create too much complexity to handle this right for now.
+                let secret = match socket.read_u64().await {
+                    Ok(s) => s,
+                    Err(e) => {
+                        println!("Error reading secret: {}", e);
+                        continue;
+                    }
+                };
+                let board_i = match remaining_secrets.get(&secret) {
+                    Some(i) => *i,
+                    None => {
+                        println!("Rejecting unlisted secret: {}", secret);
+                        continue;
+                    }
+                };
+                remaining_secrets.remove(&secret);
 
-            let (abort_handle, abort_registration) = AbortHandle::new_pair();
-            server_abort_handles.push(abort_handle);
-            futures.push(Abortable::new(
-                Self::handle_client_messages(socket, board_i, versus, all_ready),
-                abort_registration,
-            ));
+                // Clone the handle but not the inner value.
+                let versus = versus.clone();
+                let all_ready = all_ready.clone();
+
+                let (abort_handle, abort_registration) = AbortHandle::new_pair();
+                server_abort_handles.push(abort_handle);
+                futures.push(Abortable::new(
+                    Self::handle_client_messages(socket, board_i, versus, all_ready),
+                    abort_registration,
+                ));
+            }
+            }
         }
 
         let mut active_players = futures.len();
@@ -184,7 +217,7 @@ impl Versus {
         }
         println!("all clients aborted");
         println!("Server has finished");
-        let _ = futures::future::join_all(child_join_handles).await;
+        let _ = futures::future::join_all(child_join_handles_iter).await;
         println!("All clients have shut down");
     }
 

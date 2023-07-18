@@ -4,12 +4,11 @@ use std::collections::VecDeque;
 use async_trait::async_trait;
 use flatbuffers::FlatBufferBuilder;
 
-use crate::{
+use fastris::{
     board::*,
     connection::Connection,
     versus::{self, Client},
 };
-// crate fastris;
 
 pub struct ExampleClient {
     board: Board,
@@ -136,9 +135,14 @@ struct Cli {
 
 #[tokio::main]
 async fn main() {
+    println!("hello world 5");
     let cli = Cli::parse();
+    println!("parsed CLI");
+
     let mut client = ExampleClient::new();
+    println!("hello hard drop world3");
     client
         .client_spawner(&cli.server_address, cli.client_name, cli.secret)
         .await;
+    println!("hello hard drop world2");
 }
