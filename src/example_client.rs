@@ -7,7 +7,7 @@ use flatbuffers::FlatBufferBuilder;
 use crate::{
     board::*,
     connection::Connection,
-    versus::{self, Client},
+    versus::{self},
 };
 // crate fastris;
 
@@ -17,7 +17,7 @@ pub struct ExampleClient {
     garbage_holes: VecDeque<i8>,
 }
 
-use clap::{self, Parser};
+
 
 impl ExampleClient {
     pub fn new() -> ExampleClient {

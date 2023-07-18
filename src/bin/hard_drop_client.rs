@@ -1,11 +1,10 @@
 // mod fastris;
-use std::collections::VecDeque;
+
 
 use async_trait::async_trait;
-use flatbuffers::FlatBufferBuilder;
+
 
 use fastris::{
-    board::*,
     connection::Connection,
     example_client::ExampleClient,
     versus::{self, Client},
