@@ -126,19 +126,3 @@ impl versus::Client for JustWaitClient {
         tokio::time::sleep(std::time::Duration::from_millis(3000)).await;
     }
 }
-
-#[derive(Parser)]
-struct Cli {
-    server_address: String,
-    client_name: String,
-    secret: u64,
-}
-
-#[tokio::main]
-async fn main() {
-    let cli = Cli::parse();
-    let mut client = ExampleClient::new();
-    client
-        .client_spawner(&cli.server_address, cli.client_name, cli.secret)
-        .await;
-}
