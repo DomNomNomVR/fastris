@@ -18,11 +18,7 @@ pub trait RustClient: Send + 'static {
 #[async_trait]
 impl<T: RustClient> Client for T {
     async fn client_spawner(&mut self, server_address: &str, client_name: String, secret: u64) {
-        let server_address_string = server_address.to_string(); // make a copy to ensure lifetime correctness
-
-        let mut stream = TcpStream::connect(server_address_string.as_str())
-            .await
-            .unwrap();
+        let mut stream = TcpStream::connect(server_address).await.unwrap();
         match stream.write_u64(secret).await {
             Ok(_) => {}
             Err(e) => {
