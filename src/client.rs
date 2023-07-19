@@ -7,8 +7,16 @@ use tokio::process::Command;
 
 #[async_trait]
 pub trait Client: Send + 'static {
-    async fn play_game(&mut self, c: Connection);
+    async fn client_spawner(&mut self, server_address: &str, client_name: String, secret: u64);
+}
 
+#[async_trait]
+pub trait RustClient: Send + 'static {
+    async fn play_game(&mut self, c: Connection);
+}
+
+#[async_trait]
+impl<T: RustClient> Client for T {
     async fn client_spawner(&mut self, server_address: &str, client_name: String, secret: u64) {
         let server_address_string = server_address.to_string(); // make a copy to ensure lifetime correctness
 
@@ -25,16 +33,11 @@ pub trait Client: Send + 'static {
         self.play_game(Connection::new(stream, client_name)).await;
     }
 }
-
 pub struct BinaryExecutableClient {
     pub relative_path: String,
 }
 #[async_trait]
 impl Client for BinaryExecutableClient {
-    async fn play_game(&mut self, _: Connection) {
-        todo!("lel. bad design");
-    }
-
     async fn client_spawner(&mut self, server_address: &str, client_name: String, secret: u64) {
         println!("about to spawn exe");
         let _output = Command::new(&self.relative_path)

@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use fastris::client::BinaryExecutableClient;
+    use fastris::client::*;
     use fastris::example_client::ExampleClient;
     use fastris::example_client::JustWaitClient;
     use fastris::versus::Versus;

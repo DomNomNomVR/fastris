@@ -3,11 +3,7 @@ use std::collections::VecDeque;
 use async_trait::async_trait;
 use flatbuffers::FlatBufferBuilder;
 
-use crate::{
-    board::*,
-    client::Client,
-    connection::Connection,
-};
+use crate::{board::*, client::RustClient, connection::Connection};
 
 pub struct ExampleClient {
     board: Board,
@@ -52,7 +48,7 @@ impl Default for ExampleClient {
 }
 
 #[async_trait]
-impl Client for ExampleClient {
+impl RustClient for ExampleClient {
     async fn play_game(&mut self, mut connection: Connection) {
         let mut bob = FlatBufferBuilder::with_capacity(1000);
 
@@ -113,7 +109,7 @@ impl Client for ExampleClient {
 
 pub struct JustWaitClient {}
 #[async_trait]
-impl Client for JustWaitClient {
+impl RustClient for JustWaitClient {
     async fn play_game(&mut self, mut _connection: Connection) {
         tokio::time::sleep(std::time::Duration::from_millis(3000)).await;
     }
