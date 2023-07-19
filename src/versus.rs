@@ -1,5 +1,5 @@
 use crate::{board::*, client::Client, connection::Connection};
-use async_trait::async_trait;
+
 use flatbuffers::FlatBufferBuilder;
 use futures::future::{AbortHandle, Abortable};
 use futures::stream::FuturesUnordered;
@@ -11,8 +11,6 @@ use rand_xorshift::XorShiftRng;
 use std::collections::{HashMap, VecDeque};
 use std::sync::Arc;
 use tokio::io::AsyncReadExt;
-use tokio::io::AsyncWriteExt;
-use tokio::process::Command;
 
 use tokio::sync::Mutex;
 use tokio::{

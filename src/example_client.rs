@@ -7,7 +7,6 @@ use crate::{
     board::*,
     client::Client,
     connection::Connection,
-    versus::{self},
 };
 
 pub struct ExampleClient {
