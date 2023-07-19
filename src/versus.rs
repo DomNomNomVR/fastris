@@ -144,6 +144,7 @@ impl Versus {
                 Abortable::new(handle, abort_registration)
             })
             .collect();
+        let mut child_join_handles_iter = child_join_handles.into_iter();
 
         // Create the shared state.
         let versus = Arc::new(Mutex::new(Versus::new(num_players, master_seed)));
@@ -157,7 +158,6 @@ impl Versus {
         // start listening to clients
         let mut futures = FuturesUnordered::new();
         let mut server_abort_handles = Vec::new();
-        let mut child_join_handles_iter = child_join_handles.into_iter();
         while !remaining_secrets.is_empty() {
             tokio::select! {
                 _early_child_death = child_join_handles_iter.next().unwrap() => {
