@@ -1,16 +1,12 @@
 use async_trait::async_trait;
 
-use fastris::{
-    connection::Connection,
-    example_client::ExampleClient,
-    versus::{self, Client},
-};
+use fastris::{client::Client, connection::Connection, example_client::ExampleClient};
 
 use clap::{self, Parser};
 
 pub struct JustWaitClient {}
 #[async_trait]
-impl versus::Client for JustWaitClient {
+impl Client for JustWaitClient {
     async fn play_game(&mut self, mut _connection: Connection) {
         tokio::time::sleep(std::time::Duration::from_millis(3000)).await;
     }

@@ -1,9 +1,9 @@
 #[cfg(test)]
 mod tests {
+    use fastris::client::BinaryExecutableClient;
     use fastris::example_client::ExampleClient;
     use fastris::example_client::JustWaitClient;
-    use fastris::versus::*;
-    
+    use fastris::versus::Versus;
 
     extern crate fastris;
     extern crate flatbuffers;
@@ -24,7 +24,7 @@ mod tests {
     #[tokio::test]
     async fn test_with_built_binary() {
         Versus::run_match(
-            "localhost:6734",
+            "localhost:6735",
             vec![
                 Box::new(BinaryExecutableClient {
                     relative_path: "hard_drop_client.exe".into(),

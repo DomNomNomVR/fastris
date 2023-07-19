@@ -5,6 +5,7 @@ use flatbuffers::FlatBufferBuilder;
 
 use crate::{
     board::*,
+    client::Client,
     connection::Connection,
     versus::{self},
 };
@@ -52,7 +53,7 @@ impl Default for ExampleClient {
 }
 
 #[async_trait]
-impl versus::Client for ExampleClient {
+impl Client for ExampleClient {
     async fn play_game(&mut self, mut connection: Connection) {
         let mut bob = FlatBufferBuilder::with_capacity(1000);
 
@@ -113,7 +114,7 @@ impl versus::Client for ExampleClient {
 
 pub struct JustWaitClient {}
 #[async_trait]
-impl versus::Client for JustWaitClient {
+impl Client for JustWaitClient {
     async fn play_game(&mut self, mut _connection: Connection) {
         tokio::time::sleep(std::time::Duration::from_millis(3000)).await;
     }
