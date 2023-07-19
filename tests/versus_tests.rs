@@ -28,6 +28,7 @@ mod tests {
             vec![
                 Box::new(BinaryExecutableClient {
                     relative_path: "hard_drop_client.exe".into(),
+                    extra_args: vec![],
                 }),
                 Box::new(JustWaitClient {}),
             ],

@@ -35,6 +35,7 @@ impl<T: RustClient> Client for T {
 }
 pub struct BinaryExecutableClient {
     pub relative_path: String,
+    pub extra_args: Vec<String>,
 }
 #[async_trait]
 impl Client for BinaryExecutableClient {
@@ -44,6 +45,7 @@ impl Client for BinaryExecutableClient {
             .arg(server_address)
             .arg(&client_name)
             .arg(secret.to_string())
+            .args(&self.extra_args)
             .output()
             .await
             .expect("couldn't get output from process");
