@@ -35,8 +35,6 @@ pub struct Versus {
     pub unsent_upcoming_minos: Vec<VecDeque<MinoType>>,
 }
 
-pub type SpawnClient = Box<dyn Client>;
-
 #[async_trait]
 pub trait Client: Send + 'static {
     async fn play_game(&mut self, c: Connection);
@@ -114,21 +112,21 @@ impl Versus {
 
     pub async fn run_match(
         server_address: &str,
-        client_spawner: Vec<SpawnClient>,
+        clients: Vec<Box<dyn Client>>,
         master_seed: ChaCha8Rng,
     ) {
         let mut master_seed = master_seed;
         // open the port
         let listener = TcpListener::bind(server_address).await.unwrap();
 
-        let num_players = client_spawner.len();
+        let num_players = clients.len();
         let secrets = (0..num_players)
             .map(|_| master_seed.next_u64())
             .collect::<Vec<_>>();
 
         // start clients
         let mut client_abort_handles = Vec::new();
-        let child_join_handles: FuturesUnordered<_> = client_spawner
+        let client_join_handles: FuturesUnordered<_> = clients
             .into_iter()
             .zip(secrets.clone())
             .enumerate()
@@ -144,7 +142,7 @@ impl Versus {
                 Abortable::new(handle, abort_registration)
             })
             .collect();
-        let mut child_join_handles_iter = child_join_handles.into_iter();
+        let mut client_join_handles_iter = client_join_handles.into_iter();
 
         // Create the shared state.
         let versus = Arc::new(Mutex::new(Versus::new(num_players, master_seed)));
@@ -160,41 +158,41 @@ impl Versus {
         let mut server_abort_handles = Vec::new();
         while !remaining_secrets.is_empty() {
             tokio::select! {
-                _early_child_death = child_join_handles_iter.next().unwrap() => {
+                _early_child_death = client_join_handles_iter.next().unwrap() => {
                     panic!("oh noes! a client died early");
                 }
                 socket_maybe = listener.accept() => {
                     let (mut socket, _) = socket_maybe.expect("client did not connect");
 
-                // note: we could have a malicious client here stalling the server
-                // but that would create too much complexity to handle this right for now.
-                let secret = match socket.read_u64().await {
-                    Ok(s) => s,
-                    Err(e) => {
-                        println!("Error reading secret: {}", e);
-                        continue;
-                    }
-                };
-                let board_i = match remaining_secrets.get(&secret) {
-                    Some(i) => *i,
-                    None => {
-                        println!("Rejecting unlisted secret: {}", secret);
-                        continue;
-                    }
-                };
-                remaining_secrets.remove(&secret);
+                    // note: we could have a malicious client here stalling the server
+                    // but that would create too much complexity to handle this right for now.
+                    let secret = match socket.read_u64().await {
+                        Ok(s) => s,
+                        Err(e) => {
+                            println!("Error reading secret: {}", e);
+                            continue;
+                        }
+                    };
+                    let board_i = match remaining_secrets.get(&secret) {
+                        Some(&i) => i,
+                        None => {
+                            println!("Rejecting unlisted secret: {}", secret);
+                            continue;
+                        }
+                    };
+                    remaining_secrets.remove(&secret);
 
-                // Clone the handle but not the inner value.
-                let versus = versus.clone();
-                let all_ready = all_ready.clone();
+                    // Clone the handle but not the inner value.
+                    let versus = versus.clone();
+                    let all_ready = all_ready.clone();
 
-                let (abort_handle, abort_registration) = AbortHandle::new_pair();
-                server_abort_handles.push(abort_handle);
-                futures.push(Abortable::new(
-                    Self::handle_client_messages(socket, board_i, versus, all_ready),
-                    abort_registration,
-                ));
-            }
+                    let (abort_handle, abort_registration) = AbortHandle::new_pair();
+                    server_abort_handles.push(abort_handle);
+                    futures.push(Abortable::new(
+                        Self::handle_client_messages(socket, board_i, versus, all_ready),
+                        abort_registration,
+                    ));
+                }
             }
         }
 
@@ -217,7 +215,7 @@ impl Versus {
         }
         println!("all clients aborted");
         println!("Server has finished");
-        let _ = futures::future::join_all(child_join_handles_iter).await;
+        let _ = futures::future::join_all(client_join_handles_iter).await;
         println!("All clients have shut down");
     }
 
