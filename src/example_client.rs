@@ -9,7 +9,7 @@ use crate::{
     connection::Connection,
 };
 
-pub struct ExampleClient {
+pub struct HardDropClient {
     board: Board,
     garbage_heights: VecDeque<u8>,
     garbage_holes: VecDeque<i8>,
@@ -46,9 +46,9 @@ pub fn apply_external_influence(
     }
 }
 
-impl ExampleClient {
-    pub fn new() -> ExampleClient {
-        ExampleClient {
+impl HardDropClient {
+    pub fn new() -> HardDropClient {
+        HardDropClient {
             board: Board::new(),
             garbage_heights: VecDeque::new(),
             garbage_holes: VecDeque::new(),
@@ -76,7 +76,7 @@ impl ExampleClient {
     }
 }
 
-impl Default for ExampleClient {
+impl Default for HardDropClient {
     fn default() -> Self {
         Self::new()
     }
@@ -90,7 +90,7 @@ pub async fn read_external_influence(
 }
 
 #[async_trait]
-impl RustClient for ExampleClient {
+impl RustClient for HardDropClient {
     async fn play_game(&mut self, mut connection: Connection) -> Result<(), BoxedErr> {
         let mut bob = FlatBufferBuilder::with_capacity(1000);
         loop {

@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use fastris::client::*;
-    use fastris::example_client::ExampleClient;
+    use fastris::example_client::HardDropClient;
     use fastris::example_client::JustWaitClient;
     use fastris::versus::Versus;
 
@@ -15,7 +15,7 @@ mod tests {
     async fn test_game() {
         Versus::run_match(
             "localhost:6734",
-            vec![Box::new(ExampleClient::new()), Box::new(JustWaitClient {})],
+            vec![Box::new(HardDropClient::new()), Box::new(JustWaitClient {})],
             ChaCha8Rng::seed_from_u64(4),
         )
         .await;

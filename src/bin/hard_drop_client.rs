@@ -1,4 +1,4 @@
-use fastris::{client::*, example_client::ExampleClient};
+use fastris::{client::*, example_client::HardDropClient};
 
 use clap::{self, Parser};
 
@@ -12,7 +12,7 @@ struct Cli {
 #[tokio::main]
 async fn main() {
     let cli = Cli::parse();
-    let mut client = ExampleClient::new();
+    let mut client = HardDropClient::new();
     client
         .client_spawner(&cli.server_address, cli.client_name, cli.secret)
         .await;
