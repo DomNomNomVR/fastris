@@ -3,6 +3,8 @@ use tokio::{
     net::TcpStream,
 };
 
+use crate::client::BoxedErr;
+
 #[derive(Debug)]
 pub struct Connection {
     // The `TcpStream`. It is decorated with a `BufWriter`, which provides write
@@ -31,7 +33,7 @@ impl Connection {
         }
     }
 
-    pub async fn write_frame(&mut self, content: &[u8]) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn write_frame(&mut self, content: &[u8]) -> Result<(), BoxedErr> {
         assert!(content.len() <= u16::MAX as usize);
         self.stream.write_u16(content.len() as u16).await?;
         self.stream.write_all(content).await?;
@@ -39,7 +41,7 @@ impl Connection {
         Ok(())
     }
 
-    pub async fn read_frame(&mut self) -> Result<&[u8], Box<dyn std::error::Error>> {
+    pub async fn read_frame(&mut self) -> Result<&[u8], BoxedErr> {
         let frame_length = self.stream.read_u16().await? as usize;
         assert_ne!(frame_length, 0);
         if frame_length > self.buffer.len() {

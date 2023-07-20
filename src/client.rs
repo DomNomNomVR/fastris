@@ -10,9 +10,11 @@ pub trait Client: Send + 'static {
     async fn client_spawner(&mut self, server_address: &str, client_name: String, secret: u64);
 }
 
+pub type BoxedErr = Box<dyn std::error::Error + Send + Sync>;
+
 #[async_trait]
 pub trait RustClient: Send + 'static {
-    async fn play_game(&mut self, c: Connection);
+    async fn play_game(&mut self, c: Connection) -> Result<(), BoxedErr>;
 }
 
 #[async_trait]
@@ -26,7 +28,15 @@ impl<T: RustClient> Client for T {
                 return;
             }
         };
-        self.play_game(Connection::new(stream, client_name)).await;
+        let debug_name = client_name.clone();
+        match self.play_game(Connection::new(stream, debug_name)).await {
+            Ok(_) => {
+                println!("client {} exited normally", client_name);
+            }
+            Err(e) => {
+                println!("client {} exited with err: {}", client_name, e);
+            }
+        }
     }
 }
 pub struct BinaryExecutableClient {

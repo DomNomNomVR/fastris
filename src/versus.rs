@@ -235,9 +235,7 @@ impl Versus {
             };
         }
 
-        println!(
-            "This should never happen unless we change code to quit if the other player looses."
-        );
+        println!("This should never happen.");
         Ok(())
     }
 
