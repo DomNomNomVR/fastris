@@ -91,12 +91,8 @@ pub async fn read_external_influence(
 
 #[async_trait]
 impl RustClient for ExampleClient {
-    async fn play_game(
-        &mut self,
-        mut connection: Connection,
-    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn play_game(&mut self, mut connection: Connection) -> Result<(), BoxedErr> {
         let mut bob = FlatBufferBuilder::with_capacity(1000);
-
         loop {
             let influence = read_external_influence(&mut connection).await?;
             apply_external_influence(
@@ -114,10 +110,7 @@ impl RustClient for ExampleClient {
 pub struct JustWaitClient {}
 #[async_trait]
 impl RustClient for JustWaitClient {
-    async fn play_game(
-        &mut self,
-        mut _connection: Connection,
-    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn play_game(&mut self, mut _connection: Connection) -> Result<(), BoxedErr> {
         tokio::time::sleep(std::time::Duration::from_millis(3000)).await;
         Ok(())
     }
