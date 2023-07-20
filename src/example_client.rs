@@ -6,7 +6,7 @@ use flatbuffers::FlatBufferBuilder;
 use crate::{
     board::*,
     client::{BoxedErr, RustClient},
-    connection::{self, Connection},
+    connection::Connection,
 };
 
 pub struct ExampleClient {
@@ -108,7 +108,6 @@ impl RustClient for ExampleClient {
             self.build_actions(&mut bob);
             connection.write_frame(bob.finished_data()).await?;
         }
-        Ok(())
     }
 }
 
