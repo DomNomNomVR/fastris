@@ -1,4 +1,4 @@
-use fastris::{client::*, example_client::HardDropClient};
+use fastris::{client::*, client_examples::HardDropClient};
 
 use clap::{self, Parser};
 

@@ -1,8 +1,7 @@
 #[cfg(test)]
 mod tests {
     use fastris::client::*;
-    use fastris::example_client::HardDropClient;
-    use fastris::example_client::JustWaitClient;
+    use fastris::client_examples::*;
     use fastris::versus::Versus;
 
     extern crate fastris;
