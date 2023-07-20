@@ -1,16 +1,6 @@
-use async_trait::async_trait;
-
-use fastris::{client::*, connection::Connection, example_client::ExampleClient};
+use fastris::{client::*, example_client::ExampleClient};
 
 use clap::{self, Parser};
-
-pub struct JustWaitClient {}
-#[async_trait]
-impl RustClient for JustWaitClient {
-    async fn play_game(&mut self, mut _connection: Connection) {
-        tokio::time::sleep(std::time::Duration::from_millis(3000)).await;
-    }
-}
 
 #[derive(Parser)]
 struct Cli {
