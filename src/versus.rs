@@ -1,3 +1,5 @@
+use crate::board;
+use crate::client::BoxedErr;
 use crate::{board::*, client::Client, connection::Connection};
 
 use flatbuffers::FlatBufferBuilder;
@@ -8,7 +10,7 @@ use rand::distributions::{Distribution, Uniform};
 use rand::prelude::*;
 use rand_chacha::ChaCha8Rng;
 use rand_xorshift::XorShiftRng;
-use std::collections::{HashMap, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::Arc;
 use tokio::io::AsyncReadExt;
 
@@ -31,6 +33,10 @@ pub struct Versus {
     pub unsent_garbage_holes: Vec<VecDeque<i8>>,
     pub unused_upcoming_minos: Vec<VecDeque<MinoType>>,
     pub unsent_upcoming_minos: Vec<VecDeque<MinoType>>,
+}
+
+pub struct VersusOutcome {
+    pub winner_index: usize,
 }
 
 impl Versus {
@@ -65,7 +71,7 @@ impl Versus {
         server_address: &str,
         clients: Vec<Box<dyn Client>>,
         mut master_seed: ChaCha8Rng,
-    ) {
+    ) -> Result<VersusOutcome, BoxedErr> {
         // open the port
         let listener = TcpListener::bind(server_address).await.unwrap();
 
@@ -104,7 +110,7 @@ impl Versus {
             .collect::<HashMap<u64, usize>>();
 
         // start listening to clients
-        let mut futures = FuturesUnordered::new();
+        let mut server_futures = FuturesUnordered::new();
         let mut server_abort_handles = Vec::new();
         while !remaining_secrets.is_empty() {
             tokio::select! {
@@ -138,21 +144,32 @@ impl Versus {
 
                     let (abort_handle, abort_registration) = AbortHandle::new_pair();
                     server_abort_handles.push(abort_handle);
-                    futures.push(Abortable::new(
-                        Self::handle_client_messages(socket, board_i, versus, all_ready),
-                        abort_registration,
-                    ));
+
+                    server_futures.push(async move {
+                        (
+                            board_i,
+                            Abortable::new(
+                                Self::handle_client_messages(socket, board_i, versus, all_ready),
+                                abort_registration
+                            ).await
+                        )
+                    });
                 }
             }
         }
 
-        let mut active_players = futures.len();
-        while let Some(result) = futures.next().await {
-            println!("board has finished: {:?}", result);
-            active_players -= 1;
-            if active_players == 1 {
-                // we have a winner
-                break;
+        // Wait for boards to top out.
+        let mut losers = Vec::with_capacity(num_players);
+        while losers.len() < num_players - 1 {
+            if let Some((board_index, result)) = server_futures.next().await {
+                println!("board {} has finished: {:?}", board_index, result);
+                losers.push(board_index);
+            } else {
+                panic!(
+                    "ran out of server_future's faster than expected! {}/{}",
+                    losers.len(),
+                    num_players - 1
+                );
             }
         }
         println!("winner found");
@@ -167,6 +184,16 @@ impl Versus {
         println!("Server has finished");
         let _ = futures::future::join_all(client_join_handles_iter).await;
         println!("All clients have shut down");
+        // note: we only do hashing
+        let mut winners: HashSet<usize> = (0..num_players).collect();
+        for loser in losers {
+            winners.remove(&loser);
+        }
+        let winner_index = winners
+            .into_iter()
+            .next()
+            .expect("want at least one winner");
+        Ok(VersusOutcome { winner_index })
     }
 
     async fn handle_client_messages(
@@ -206,13 +233,7 @@ impl Versus {
                         // This scope exists for locking versus for the minimal amount of
                         let mut versus = versus.lock().await;
                         for action in action_list.actions().unwrap() {
-                            match versus.apply_action(&action, board_i) {
-                                Ok(_) => {}
-                                Err(e) => {
-                                    println!("Err when versus.apply_action: {:?}", e);
-                                    return Err(e);
-                                }
-                            }
+                            versus.apply_action(&action, board_i)?;
                         }
 
                         // optimization TODO: at this point we only need to lock the unsent queues.
@@ -290,6 +311,7 @@ impl Versus {
                     // This player has lost.
                     Err(penalty)
                 } else {
+                    println!("ignoring penalty for player {}: {:?}", board_i, penalty);
                     Ok(())
                 }
             }
