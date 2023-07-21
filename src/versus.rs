@@ -1,4 +1,3 @@
-use crate::board;
 use crate::client::BoxedErr;
 use crate::{board::*, client::Client, connection::Connection};
 
@@ -172,7 +171,6 @@ impl Versus {
                 );
             }
         }
-        println!("winner found");
         for abort_handle in server_abort_handles.into_iter() {
             abort_handle.abort();
         }
@@ -181,9 +179,8 @@ impl Versus {
             abort_handle.abort();
         }
         println!("all clients aborted");
-        println!("Server has finished");
         let _ = futures::future::join_all(client_join_handles_iter).await;
-        println!("All clients have shut down");
+        println!("all clients finished");
         // note: we only do hashing
         let mut winners: HashSet<usize> = (0..num_players).collect();
         for loser in losers {
