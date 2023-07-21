@@ -179,7 +179,9 @@ impl Versus {
             abort_handle.abort();
         }
         println!("all clients aborted");
-        let _ = futures::future::join_all(client_join_handles_iter).await;
+        while let Some((_board_index, _result)) = server_futures.next().await {
+            // println!("board {} has finished: {:?}", board_index, result);
+        }
         println!("all clients finished");
         // note: we only do hashing
         let mut winners: HashSet<usize> = (0..num_players).collect();
@@ -198,7 +200,7 @@ impl Versus {
         board_i: usize,
         versus: Arc<Mutex<Versus>>,
         all_ready: Arc<Barrier>,
-    ) -> Result<(), Penalty> {
+    ) -> Result<Penalty, BoxedErr> {
         let mut connection = Connection::new(socket, format!("versus<->client[{}]", board_i));
         let mut bob = FlatBufferBuilder::with_capacity(1000);
 
@@ -209,46 +211,29 @@ impl Versus {
             versus.fill_upcoming_minos(board_i);
             versus.build_response(&mut bob, board_i);
         }
+
         // Wait before sending the initial data to the client until all clients are ready.
         let _ = all_ready.wait().await;
         println!("Starting pistol fired for client {}", board_i);
-        match connection.write_frame(bob.finished_data()).await {
-            Ok(()) => {}
-            Err(e) => {
-                return Err(Penalty::new(
-                    format!("ending client {} due to write error: {}", board_i, e).as_str(),
-                ));
-            }
-        };
+        connection.write_frame(bob.finished_data()).await?;
 
         loop {
-            match connection.read_frame().await {
-                Ok(buf) => {
-                    let action_list =
-                        flatbuffers::root::<PlayerActionList>(buf).expect("unable to deserialize");
-                    {
-                        // This scope exists for locking versus for the minimal amount of
-                        let mut versus = versus.lock().await;
-                        for action in action_list.actions().unwrap() {
-                            versus.apply_action(&action, board_i)?;
-                        }
+            let buf = connection.read_frame().await?;
+            let action_list = flatbuffers::root::<PlayerActionList>(buf)?;
+            {
+                // This scope exists for locking versus for the minimal amount of
+                let mut versus = versus.lock().await;
+                for action in action_list.actions().unwrap() {
+                    if let Err(p) = versus.apply_action(&action, board_i) {
+                        return Ok(p);
+                    };
+                }
 
-                        // optimization TODO: at this point we only need to lock the unsent queues.
-                        versus.build_response(&mut bob, board_i);
-                    }
-                }
-                Err(e) => {
-                    return Err(Penalty::new(
-                        format!("client {} quitting due to server quit: {}", board_i, e).as_str(),
-                    ));
-                }
+                // optimization TODO: at this point we only need to lock the unsent queues.
+                versus.build_response(&mut bob, board_i);
             }
 
-            if let Err(e) = connection.write_frame(bob.finished_data()).await {
-                return Err(Penalty::new(
-                    format!("ending client {} due to write error: {}", board_i, e).as_str(),
-                ));
-            };
+            connection.write_frame(bob.finished_data()).await?;
         }
         // note: we always exit from within the loop
     }
