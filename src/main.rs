@@ -15,7 +15,6 @@ struct Cli {
 async fn main() -> Result<(), BoxedErr> {
     let cli = Cli::parse();
 
-    // 1.) does work
     let mut clients: Vec<Box<dyn Client>> = vec![];
     for path in cli.client_executables.into_iter() {
         clients.push(Box::new(BinaryExecutableClient {
@@ -23,20 +22,6 @@ async fn main() -> Result<(), BoxedErr> {
             extra_args: vec![],
         }));
     }
-
-    // // 2.) does not work. Gives error:
-    // //       value of type `Vec<Box<dyn fastris::client::Client>>` cannot be built from
-    // //       `std::iter::Iterator<Item=Box<fastris::client::BinaryExecutableClient>>`
-    // let clients: Vec<Box<dyn Client>> = cli
-    //     .client_executables
-    //     .into_iter()
-    //     .map(|path| {
-    //         Box::new(BinaryExecutableClient {
-    //             relative_path: path,
-    //             extra_args: vec![],
-    //         })
-    //     })
-    //     .collect();
 
     let outcome = Versus::run_match(
         &cli.server_address,
