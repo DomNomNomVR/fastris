@@ -238,22 +238,19 @@ impl Versus {
                     }
                 }
                 Err(e) => {
-                    print!("client {} quitting due to server quit: {}", board_i, e);
-                    return Ok(());
+                    return Err(Penalty::new(
+                        format!("client {} quitting due to server quit: {}", board_i, e).as_str(),
+                    ));
                 }
             }
 
-            match connection.write_frame(bob.finished_data()).await {
-                Ok(()) => {}
-                Err(e) => {
-                    print!("ending client {} due to write error: {}", board_i, e);
-                    break;
-                }
+            if let Err(e) = connection.write_frame(bob.finished_data()).await {
+                return Err(Penalty::new(
+                    format!("ending client {} due to write error: {}", board_i, e).as_str(),
+                ));
             };
         }
-
-        println!("This should never happen.");
-        Ok(())
+        // note: we always exit from within the loop
     }
 
     pub fn build_response(&mut self, bob: &mut FlatBufferBuilder, board_i: usize) {
