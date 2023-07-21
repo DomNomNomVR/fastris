@@ -64,9 +64,8 @@ impl Versus {
     pub async fn run_match(
         server_address: &str,
         clients: Vec<Box<dyn Client>>,
-        master_seed: ChaCha8Rng,
+        mut master_seed: ChaCha8Rng,
     ) {
-        let mut master_seed = master_seed;
         // open the port
         let listener = TcpListener::bind(server_address).await.unwrap();
 
