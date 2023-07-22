@@ -15,7 +15,7 @@ struct Cli {
 async fn main() -> Result<(), BoxedErr> {
     let cli = Cli::parse();
 
-    let mut clients: Vec<Box<dyn Client>> = vec![];
+    let mut clients: Vec<Box<dyn Client>> = Vec::with_capacity(cli.client_executables.len());
     for path in cli.client_executables.into_iter() {
         clients.push(Box::new(BinaryExecutableClient {
             relative_path: path,
