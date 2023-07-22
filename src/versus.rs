@@ -34,6 +34,7 @@ pub struct Versus {
     pub unsent_upcoming_minos: Vec<VecDeque<MinoType>>,
 }
 
+#[derive(Debug)]
 pub struct VersusOutcome {
     pub winner_index: usize,
 }
@@ -71,6 +72,10 @@ impl Versus {
         clients: Vec<Box<dyn Client>>,
         mut master_seed: ChaCha8Rng,
     ) -> Result<VersusOutcome, BoxedErr> {
+        if clients.len() > 2 {
+            return Err("More than 2 clients is not yet supported".into());
+        }
+
         // open the port
         let listener = TcpListener::bind(server_address).await.unwrap();
 
