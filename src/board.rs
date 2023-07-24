@@ -598,18 +598,9 @@ impl Penalty {
 pub fn apply_action(a: &PlayerAction, b: &mut Board) -> Result<u8, Penalty> {
     try_set_active_mino(b)?; // this also handles top-out.
     match a.action_type() {
-        PlayerActions::RotateCW => match a.action_as_rotate_cw() {
-            None => Err(Penalty::new("RotateCW was empty")),
-            Some(a2) => apply_rotate_cw(&a2, b),
-        },
-        PlayerActions::RotateCCW => match a.action_as_rotate_ccw() {
-            None => Err(Penalty::new("RotateCCW was empty")),
-            Some(a2) => apply_rotate_ccw(&a2, b),
-        },
-        PlayerActions::Rotate180 => match a.action_as_rotate_180() {
-            None => Err(Penalty::new("Rotate180 was empty")),
-            Some(a2) => apply_rotate180(&a2, b),
-        },
+        PlayerActions::RotateCW => apply_rotate(Orientation::rotate_cw, b),
+        PlayerActions::RotateCCW => apply_rotate(Orientation::rotate_ccw, b),
+        PlayerActions::Rotate180 => apply_rotate(Orientation::rotate_180, b),
         PlayerActions::HardDrop => match a.action_as_hard_drop() {
             None => Err(Penalty::new("HardDrop was empty")),
             Some(a2) => apply_hard_drop(&a2, b),
@@ -762,15 +753,6 @@ fn apply_rotate<F: Fn(&Orientation) -> Orientation>(
     }
 
     Ok(0)
-}
-fn apply_rotate_cw(_a: &RotateCW, board: &mut Board) -> Result<u8, Penalty> {
-    apply_rotate(Orientation::rotate_cw, board)
-}
-fn apply_rotate_ccw(_a: &RotateCCW, board: &mut Board) -> Result<u8, Penalty> {
-    apply_rotate(Orientation::rotate_ccw, board)
-}
-fn apply_rotate180(_a: &Rotate180, board: &mut Board) -> Result<u8, Penalty> {
-    apply_rotate(Orientation::rotate_180, board)
 }
 fn apply_hold(_a: &Hold, board: &mut Board) -> Result<u8, Penalty> {
     let hold = board.active_mino.as_ref().map(|mino| mino.mino_type);
