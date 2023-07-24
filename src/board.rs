@@ -603,7 +603,7 @@ pub fn apply_action(a: &PlayerAction, b: &mut Board) -> Result<u8, Penalty> {
         PlayerActions::Rotate180 => apply_rotate(Orientation::rotate_180, b),
         PlayerActions::HardDrop => match a.action_as_hard_drop() {
             None => Err(Penalty::new("HardDrop was empty")),
-            Some(a2) => apply_hard_drop(&a2, b),
+            Some(a2) => apply_hard_drop(b),
         },
         PlayerActions::SoftDrop => match a.action_as_soft_drop() {
             None => Err(Penalty::new("SoftDrop was empty")),
@@ -770,7 +770,7 @@ fn test_intersection(mask: &MinoMask, board_rows: &[u16; BOARD_HEIGHT]) -> bool 
     }
     acc != 0
 }
-fn apply_hard_drop(_a: &HardDrop, board: &mut Board) -> Result<u8, Penalty> {
+fn apply_hard_drop(board: &mut Board) -> Result<u8, Penalty> {
     if board.active_mino.is_none() {
         return Err(Penalty::new("Trying to hard drop without an active piece"));
     }
