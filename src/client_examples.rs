@@ -1,4 +1,4 @@
-use std::collections::VecDeque;
+use std::collections::{HashMap, HashSet, VecDeque};
 
 use async_trait::async_trait;
 use flatbuffers::FlatBufferBuilder;
@@ -107,11 +107,106 @@ impl RustClient for HardDropClient {
     }
 }
 
+#[async_trait]
+impl RustClient for RightWellClient {
+    async fn play_game(&mut self, mut connection: Connection) -> Result<(), BoxedErr> {
+        let mut bob = FlatBufferBuilder::with_capacity(1000);
+        loop {
+            let influence = read_external_influence(&mut connection).await?;
+            apply_external_influence(
+                &influence,
+                &mut self.board,
+                &mut self.garbage_heights,
+                &mut self.garbage_holes,
+            );
+            self.build_actions(&mut bob);
+            connection.write_frame(bob.finished_data()).await?;
+        }
+    }
+}
+
 pub struct JustWaitClient {}
 #[async_trait]
 impl RustClient for JustWaitClient {
     async fn play_game(&mut self, mut _connection: Connection) -> Result<(), BoxedErr> {
         tokio::time::sleep(std::time::Duration::from_millis(3000)).await;
         Ok(())
+    }
+}
+
+pub struct RightWellClient {
+    board: Board,
+    garbage_heights: VecDeque<u8>,
+    garbage_holes: VecDeque<i8>,
+}
+
+pub fn get_all_uniqe_hard_drops() -> HashMap<MinoType, Vec<Vec<PlayerAction>>> {
+    let out = HashMap::new();
+    let all_rotations = vec![
+        None,
+        Some(PlayerActions::RotateCW),
+        Some(PlayerActions::RotateCCW),
+        Some(PlayerActions::Rotate180),
+    ];
+    for mino_type in MinoType::ENUM_VALUES {
+        let all_reachables = HashSet::<Board>::new();
+        for right in -10..10 {
+            for rotation in all_rotations {
+                let bob = &mut FlatBufferBuilder::with_capacity(1000);
+
+                let hard_drop = HardDrop::create(bob, &HardDropArgs {});
+                let action = PlayerAction::create(
+                    bob,
+                    &PlayerActionArgs {
+                        action_type: PlayerActions::HardDrop,
+                        action: Some(hard_drop.as_union_value()),
+                    },
+                );
+                let action_vector = bob.create_vector(&[action]);
+                let action_list = PlayerActionList::create(
+                    bob,
+                    &PlayerActionListArgs {
+                        actions: Some(action_vector),
+                    },
+                );
+                bob.finish(action_list, None);
+            }
+        }
+    }
+    out
+}
+
+impl RightWellClient {
+    pub fn new() -> RightWellClient {
+        RightWellClient {
+            board: Board::new(),
+            garbage_heights: VecDeque::new(),
+            garbage_holes: VecDeque::new(),
+        }
+    }
+    fn build_actions(&mut self, bob: &mut FlatBufferBuilder) {
+        bob.reset();
+        let hard_drop = HardDrop::create(bob, &HardDropArgs {});
+        let action = PlayerAction::create(
+            bob,
+            &PlayerActionArgs {
+                action_type: PlayerActions::HardDrop,
+                action: Some(hard_drop.as_union_value()),
+            },
+        );
+        let action_vector = bob.create_vector(&[action]);
+        let action_list = PlayerActionList::create(
+            bob,
+            &PlayerActionListArgs {
+                actions: Some(action_vector),
+            },
+        );
+        bob.finish(action_list, None);
+    }
+}
+
+impl Default for RightWellClient {
+    fn default() -> Self {
+        Self::new()
     }
 }

@@ -63,4 +63,19 @@ mod tests {
         .await
         .expect_err("want error about more than 2 args");
     }
+
+    #[tokio::test]
+    async fn test_just_wait_client_can_lose() {
+        let outcome = Versus::run_match(
+            "localhost:6734",
+            vec![
+                Box::new(RightWellClient::new()),
+                Box::new(JustWaitClient {}),
+            ],
+            ChaCha8Rng::seed_from_u64(4),
+        )
+        .await
+        .expect("want no error");
+        assert_eq!(outcome.winner_index, 1);
+    }
 }
