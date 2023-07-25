@@ -601,10 +601,7 @@ pub fn apply_action(a: &PlayerAction, b: &mut Board) -> Result<u8, Penalty> {
         PlayerActions::RotateCW => apply_rotate(Orientation::rotate_cw, b),
         PlayerActions::RotateCCW => apply_rotate(Orientation::rotate_ccw, b),
         PlayerActions::Rotate180 => apply_rotate(Orientation::rotate_180, b),
-        PlayerActions::HardDrop => match a.action_as_hard_drop() {
-            None => Err(Penalty::new("HardDrop was empty")),
-            Some(a2) => apply_hard_drop(b),
-        },
+        PlayerActions::HardDrop => apply_hard_drop(b),
         PlayerActions::SoftDrop => match a.action_as_soft_drop() {
             None => Err(Penalty::new("SoftDrop was empty")),
             Some(a2) => apply_soft_drop(&a2, b),
@@ -613,10 +610,7 @@ pub fn apply_action(a: &PlayerAction, b: &mut Board) -> Result<u8, Penalty> {
             None => Err(Penalty::new("Horizontal was empty")),
             Some(a2) => apply_horizontal(&a2, b),
         },
-        PlayerActions::Hold => match a.action_as_hold() {
-            None => Err(Penalty::new("hold was empty")),
-            Some(a2) => apply_hold(&a2, b),
-        },
+        PlayerActions::Hold => apply_hold(b),
         x => Err(Penalty::new(
             format!("Unsupported PlayerAction: {:?}", x).as_str(),
         )),
@@ -754,7 +748,7 @@ fn apply_rotate<F: Fn(&Orientation) -> Orientation>(
 
     Ok(0)
 }
-fn apply_hold(_a: &Hold, board: &mut Board) -> Result<u8, Penalty> {
+fn apply_hold(board: &mut Board) -> Result<u8, Penalty> {
     let hold = board.active_mino.as_ref().map(|mino| mino.mino_type);
     board.active_mino = board.hold.map(|mino_type| spawn_mino(mino_type, board));
     board.hold = hold;
