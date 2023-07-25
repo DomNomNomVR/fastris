@@ -140,29 +140,62 @@ pub struct RightWellClient {
     garbage_holes: VecDeque<i8>,
 }
 
-pub fn get_all_uniqe_hard_drops() -> HashMap<MinoType, Vec<Vec<PlayerAction>>> {
-    let out = HashMap::new();
+pub struct PlayerActionListHolder {
+    bob: FlatBufferBuilder<'static>,
+}
+impl PlayerActionListHolder {
+    fn actions(&self) -> flatbuffers::Vector<'_, flatbuffers::ForwardsUOffset<PlayerAction<'_>>> {
+        let buf = self.bob.finished_data();
+        let action_list = flatbuffers::root::<PlayerActionList>(buf).unwrap();
+        action_list.actions().unwrap()
+    }
+}
+
+pub fn get_all_uniqe_hard_drops() -> HashMap<MinoType, Vec<PlayerActionListHolder>> {
+    // brute force all hard drops and see whether they lead to unique outcomes
+    let mut out = HashMap::new();
     let all_rotations = vec![
         None,
         Some(PlayerActions::RotateCW),
         Some(PlayerActions::RotateCCW),
         Some(PlayerActions::Rotate180),
     ];
-    for mino_type in MinoType::ENUM_VALUES {
-        let all_reachables = HashSet::<Board>::new();
+    for &mino_type in MinoType::ENUM_VALUES {
+        let mut unique_outcome_actions = vec![];
+        let mut seen_outcomes = HashSet::new();
         for right in -10..10 {
-            for rotation in all_rotations {
-                let bob = &mut FlatBufferBuilder::with_capacity(1000);
+            for rotation in all_rotations.iter() {
+                let mut holder = PlayerActionListHolder {
+                    bob: FlatBufferBuilder::with_capacity(1000),
+                };
+                let bob = &mut holder.bob;
 
-                let hard_drop = HardDrop::create(bob, &HardDropArgs {});
-                let action = PlayerAction::create(
+                let mut action_list = vec![];
+                if let Some(rot) = rotation {
+                    action_list.push(PlayerAction::create(
+                        bob,
+                        &PlayerActionArgs {
+                            action_type: *rot,
+                            action: None,
+                        },
+                    ));
+                }
+                let horizontal = Horizontal::create(bob, &HorizontalArgs { right });
+                action_list.push(PlayerAction::create(
+                    bob,
+                    &PlayerActionArgs {
+                        action_type: PlayerActions::Horizontal,
+                        action: Some(horizontal.as_union_value()),
+                    },
+                ));
+                action_list.push(PlayerAction::create(
                     bob,
                     &PlayerActionArgs {
                         action_type: PlayerActions::HardDrop,
-                        action: Some(hard_drop.as_union_value()),
+                        action: None,
                     },
-                );
-                let action_vector = bob.create_vector(&[action]);
+                ));
+                let action_vector = bob.create_vector(action_list.as_slice());
                 let action_list = PlayerActionList::create(
                     bob,
                     &PlayerActionListArgs {
@@ -170,8 +203,30 @@ pub fn get_all_uniqe_hard_drops() -> HashMap<MinoType, Vec<Vec<PlayerAction>>> {
                     },
                 );
                 bob.finish(action_list, None);
+
+                // Apply the built actions to the board.
+                let mut board = Board::new();
+                let mut any_fail = false;
+                board.upcoming_minos.push_back(mino_type);
+                for action in holder.actions() {
+                    match apply_action(&action, &mut board) {
+                        Ok(_) => {}
+                        Err(penalty) => {
+                            assert!(penalty.significance < 100);
+                            any_fail = true;
+                            break;
+                        }
+                    }
+                }
+                if any_fail {
+                    continue;
+                }
+                if seen_outcomes.insert(board) {
+                    unique_outcome_actions.push(holder);
+                }
             }
         }
+        out.insert(mino_type, unique_outcome_actions);
     }
     out
 }

@@ -67,7 +67,7 @@ mod tests {
     #[tokio::test]
     async fn test_just_wait_client_can_lose() {
         let outcome = Versus::run_match(
-            "localhost:6734",
+            "localhost:6736",
             vec![
                 Box::new(RightWellClient::new()),
                 Box::new(JustWaitClient {}),
@@ -76,6 +76,6 @@ mod tests {
         )
         .await
         .expect("want no error");
-        assert_eq!(outcome.winner_index, 1);
+        assert_eq!(outcome.winner_index, 0);
     }
 }
