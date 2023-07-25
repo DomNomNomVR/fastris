@@ -755,10 +755,10 @@ fn apply_hold(board: &mut Board) -> Result<u8, Penalty> {
     Ok(0)
 }
 fn test_intersection(mask: &MinoMask, board_rows: &[u16; BOARD_HEIGHT]) -> bool {
-    let mut acc = 0;
     if board_rows[mask.bottom_row] == 0 {
         return false; // nothing can be at this row or above.
     }
+    let mut acc = 0;
     for i in 0..4usize {
         acc |= board_rows[mask.bottom_row + i] & mask.covered[i];
     }
