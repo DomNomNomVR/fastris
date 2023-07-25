@@ -152,7 +152,7 @@ impl PlayerActionListHolder {
 }
 
 pub fn get_all_uniqe_hard_drops() -> HashMap<MinoType, Vec<PlayerActionListHolder>> {
-    // brute force all hard drops and see whether they lead to unique outcomes
+    // brute force all hard drops and keep ones that lead to unique outcomes.
     let mut out = HashMap::new();
     let all_rotations = vec![
         None,
@@ -169,14 +169,27 @@ pub fn get_all_uniqe_hard_drops() -> HashMap<MinoType, Vec<PlayerActionListHolde
                     bob: FlatBufferBuilder::with_capacity(1000),
                 };
                 let bob = &mut holder.bob;
-
                 let mut action_list = vec![];
                 if let Some(rot) = rotation {
+                    let action = match *rot {
+                        PlayerActions::RotateCW => {
+                            RotateCW::create(bob, &RotateCWArgs {}).as_union_value()
+                        }
+                        PlayerActions::RotateCCW => {
+                            RotateCCW::create(bob, &RotateCCWArgs {}).as_union_value()
+                        }
+                        PlayerActions::Rotate180 => {
+                            Rotate180::create(bob, &Rotate180Args {}).as_union_value()
+                        }
+                        _ => {
+                            panic!("Should only pass in one of the three rotations here.");
+                        }
+                    };
                     action_list.push(PlayerAction::create(
                         bob,
                         &PlayerActionArgs {
                             action_type: *rot,
-                            action: None,
+                            action: Some(action),
                         },
                     ));
                 }
@@ -188,13 +201,15 @@ pub fn get_all_uniqe_hard_drops() -> HashMap<MinoType, Vec<PlayerActionListHolde
                         action: Some(horizontal.as_union_value()),
                     },
                 ));
+                let hard_drop = HardDrop::create(bob, &HardDropArgs {});
                 action_list.push(PlayerAction::create(
                     bob,
                     &PlayerActionArgs {
                         action_type: PlayerActions::HardDrop,
-                        action: None,
+                        action: Some(hard_drop.as_union_value()),
                     },
                 ));
+
                 let action_vector = bob.create_vector(action_list.as_slice());
                 let action_list = PlayerActionList::create(
                     bob,
@@ -219,6 +234,7 @@ pub fn get_all_uniqe_hard_drops() -> HashMap<MinoType, Vec<PlayerActionListHolde
                     }
                 }
                 if any_fail {
+                    // discard cases where we moved too much left or right.
                     continue;
                 }
                 if seen_outcomes.insert(board) {
@@ -231,6 +247,25 @@ pub fn get_all_uniqe_hard_drops() -> HashMap<MinoType, Vec<PlayerActionListHolde
     out
 }
 
+#[cfg(test)]
+mod tests {
+    use crate::board::MinoType;
+
+    use super::get_all_uniqe_hard_drops;
+
+    #[test]
+    fn test_get_all_uniqe_hard_drops() {
+        let uniques = get_all_uniqe_hard_drops();
+        assert_eq!(uniques.len(), 7);
+        assert_eq!(uniques[&MinoType::O].len(), (8 - 1)); // one less then the width
+        assert_eq!(uniques[&MinoType::I].len(), (8 - 3) + 8);
+        assert_eq!(uniques[&MinoType::S].len(), (8 - 1) + (8 - 2));
+        assert_eq!(uniques[&MinoType::Z].len(), (8 - 1) + (8 - 2));
+        assert_eq!(uniques[&MinoType::L].len(), (8 - 1) * 2 + (8 - 2) * 2);
+        assert_eq!(uniques[&MinoType::J].len(), (8 - 1) * 2 + (8 - 2) * 2);
+        assert_eq!(uniques[&MinoType::T].len(), (8 - 1) * 2 + (8 - 2) * 2);
+    }
+}
 impl RightWellClient {
     pub fn new() -> RightWellClient {
         RightWellClient {
