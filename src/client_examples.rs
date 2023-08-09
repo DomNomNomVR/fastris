@@ -39,7 +39,7 @@ pub fn apply_external_influence(
             rows[i + garbage_height] = rows[i];
         }
 
-        let row = Board::full_row(board.width) ^ (1 << garbage_hole);
+        let row = Board::row_with_hole(board.width, garbage_hole);
         rows[0..garbage_height]
             .iter_mut()
             .for_each(|row2| *row2 = row);
@@ -138,6 +138,7 @@ pub struct RightWellClient {
     board: Board,
     garbage_heights: VecDeque<u8>,
     garbage_holes: VecDeque<i8>,
+    unique_hard_drops: HashMap<MinoType, Vec<PlayerActionListHolder>>,
 }
 
 pub struct PlayerActionListHolder {
@@ -151,7 +152,7 @@ impl PlayerActionListHolder {
     }
 }
 
-pub fn get_all_uniqe_hard_drops() -> HashMap<MinoType, Vec<PlayerActionListHolder>> {
+pub fn get_all_unique_hard_drops() -> HashMap<MinoType, Vec<PlayerActionListHolder>> {
     // brute force all hard drops and keep ones that lead to unique outcomes.
     let mut out = HashMap::new();
     let all_rotations = vec![
@@ -249,13 +250,11 @@ pub fn get_all_uniqe_hard_drops() -> HashMap<MinoType, Vec<PlayerActionListHolde
 
 #[cfg(test)]
 mod tests {
-    use crate::board::MinoType;
-
-    use super::get_all_uniqe_hard_drops;
+    use super::*;
 
     #[test]
     fn test_get_all_uniqe_hard_drops() {
-        let uniques = get_all_uniqe_hard_drops();
+        let uniques = get_all_unique_hard_drops();
         assert_eq!(uniques.len(), 7);
         assert_eq!(uniques[&MinoType::O].len(), (8 - 1)); // one less then the width
         assert_eq!(uniques[&MinoType::I].len(), (8 - 3) + 8);
@@ -265,15 +264,118 @@ mod tests {
         assert_eq!(uniques[&MinoType::J].len(), (8 - 1) * 2 + (8 - 2) * 2);
         assert_eq!(uniques[&MinoType::T].len(), (8 - 1) * 2 + (8 - 2) * 2);
     }
+
+    #[test]
+    fn test_find_local_best_action() {
+        let mut client = RightWellClient::new();
+        client.board = Board::from_ascii_art(
+            "
+        _|        |O 
+         |        |   
+         |.  .... |   
+         |.  .... |   
+        ",
+        );
+        try_set_active_mino(&mut client.board).expect("should have an activatable mino in queue");
+        assert_eq!(client.find_immediate_best_hard_drop(), (0 as EV, -2, None));
+    }
 }
+
+type EV = i32; // expected value
+
 impl RightWellClient {
     pub fn new() -> RightWellClient {
         RightWellClient {
             board: Board::new(),
             garbage_heights: VecDeque::new(),
             garbage_holes: VecDeque::new(),
+            unique_hard_drops: get_all_unique_hard_drops(),
         }
     }
+
+    // fn get_holes_below_mask(board: &Board, mask: &MinoMask) -> i8 {
+
+    // }
+
+    pub fn get_expected_value(board: &Board, mask: &MinoMask) -> EV {
+        let mut val = 0;
+        let weight = 1;
+        val -= weight * mask.bottom_row as EV; // incentivize dropping into holes
+
+        // treat the right well specially.
+        let right_count: u16 = mask.covered.iter().map(|row| row & 1).sum();
+        val += if right_count == 4 {
+            let clear_count: i32 = board.rows[mask.bottom_row..]
+                .iter()
+                .take(4)
+                .map(|&row| {
+                    if row == Board::row_with_hole(board.width, 0) {
+                        1
+                    } else {
+                        0
+                    }
+                })
+                .sum();
+            // .iter().map(|row| row & 1).sum();
+            //
+            weight * (clear_count - 3) // lets try for tetris only
+        } else if right_count > 1 {
+            weight * -(right_count as i32)
+        } else {
+            0
+        };
+
+        val
+    }
+
+    pub fn find_immediate_best_hard_drop(&mut self) -> (EV, i8, Option<PlayerActions>) {
+        let mino = self.board.active_mino.as_ref().unwrap();
+        self.unique_hard_drops
+            .get(&mino.mino_type)
+            .unwrap()
+            .iter()
+            .map(|holder| {
+                let actions = holder.actions();
+                let has_rotate = actions.len() == 3;
+                let horizontal_i = if has_rotate { 1 } else { 0 };
+
+                // Apply the rotate and horizontal actions.
+                if has_rotate {
+                    apply_action(&actions.get(0), &mut self.board)
+                        .expect("expected rotate to succeed without penalty");
+                }
+                apply_action(&actions.get(horizontal_i), &mut self.board)
+                    .expect("expected horizontal to succeed without penalty");
+                let mut mask =
+                    mask_from_mino(self.board.active_mino.as_ref().unwrap(), self.board.width)
+                        .unwrap();
+                mask.set_hard_drop_row(&self.board);
+
+                // prepare output.
+                let right = actions
+                    .get(horizontal_i)
+                    .action_as_horizontal()
+                    .unwrap()
+                    .right();
+                let rotate = if has_rotate {
+                    Some(actions.get(1).action_type())
+                } else {
+                    None
+                };
+                let ev = RightWellClient::get_expected_value(&self.board, &mask);
+                let mino_type = self.board.active_mino.as_ref().unwrap().mino_type;
+                let out = (ev, right, rotate);
+
+                // reset the board
+                self.board.upcoming_minos.push_front(mino_type);
+                self.board.active_mino = None;
+
+                out
+            })
+            .max()
+            .unwrap()
+    }
+
     fn build_actions(&mut self, bob: &mut FlatBufferBuilder) {
         bob.reset();
         let hard_drop = HardDrop::create(bob, &HardDropArgs {});

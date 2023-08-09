@@ -98,6 +98,21 @@ pub struct MinoMask {
     pub covered: [u16; 4],
 }
 
+impl MinoMask {
+    pub fn set_hard_drop_row(&mut self, board: &Board) {
+        // test each place going down
+        // TODO: optimization about traversing many empty rows
+        // note: we assume it currently doesn't intersect.
+        for bot in (0..self.bottom_row).rev() {
+            self.bottom_row = bot;
+            if test_intersection(self, &board.rows) {
+                self.bottom_row += 1;
+                return;
+            }
+        }
+    }
+}
+
 pub fn mask_from_mino(m: &Mino, board_width: i8) -> Result<MinoMask, Penalty> {
     let shift_to_pivot = board_width - 1 - m.pivot_x;
     // https://tetris.wiki/Super_Rotation_System#How_Guideline_SRS_Really_Works
@@ -393,6 +408,9 @@ impl Board {
     pub fn full_row(width: i8) -> u16 {
         u16::MAX >> (16 - width)
     }
+    pub fn row_with_hole(width: i8, hole_column: i8) -> u16 {
+        Board::full_row(width) ^ (1 << hole_column)
+    }
 
     pub fn add_upcoming_minos_from_str(&mut self, upcoming_minos: &str) {
         for mino_type_char in upcoming_minos.chars() {
@@ -627,7 +645,7 @@ fn spawn_mino(mino_type: MinoType, board: &Board) -> Mino {
     }
 }
 
-fn try_set_active_mino(board: &mut Board) -> Result<(), Penalty> {
+pub fn try_set_active_mino(board: &mut Board) -> Result<(), Penalty> {
     if board.active_mino.is_none() {
         let maybe_mino_type = board.upcoming_minos.pop_front();
         match maybe_mino_type {
@@ -764,22 +782,15 @@ fn test_intersection(mask: &MinoMask, board_rows: &[u16; BOARD_HEIGHT]) -> bool 
     }
     acc != 0
 }
+
 fn apply_hard_drop(board: &mut Board) -> Result<u8, Penalty> {
     if board.active_mino.is_none() {
         return Err(Penalty::new("Trying to hard drop without an active piece"));
     }
     let mino = board.active_mino.as_ref().unwrap();
     let mut mask = mask_from_mino(mino, board.width)?;
-    // test each place going down
-    // TODO: optimization about traversing many empty rows
-    // note: we assume it currently doesn't intersect.
-    for bot in (0..mask.bottom_row).rev() {
-        mask.bottom_row = bot;
-        if test_intersection(&mask, &board.rows) {
-            mask.bottom_row += 1;
-            break;
-        }
-    }
+    mask.set_hard_drop_row(board);
+
     assert!(!test_intersection(&mask, &board.rows));
     for i in 0..4usize {
         board.rows[mask.bottom_row + i] |= mask.covered[i];
